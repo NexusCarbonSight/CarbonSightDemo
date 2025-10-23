@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './RegulatorDashboard.css';
-import ClimateTraceData from '../components/ClimateTraceData';
 
 function RegulatorDashboard() {
   const navigate = useNavigate();
@@ -13,6 +12,25 @@ function RegulatorDashboard() {
     { type: 'ai', text: 'Hello! I\'m your regulatory AI assistant. I can help with compliance monitoring, alert analysis, and regulatory insights. How can I assist you today?' }
   ]);
   const [chatInput, setChatInput] = useState('');
+  
+  // Modal states
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [showEnforcementModal, setShowEnforcementModal] = useState(false);
+  const [reviewComment, setReviewComment] = useState('');
+  const [inspectionDate, setInspectionDate] = useState('');
+  const [enforcementAction, setEnforcementAction] = useState('');
+  const [companySearchTerm, setCompanySearchTerm] = useState('');
+  const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
+  const [alertSearchTerm, setAlertSearchTerm] = useState('');
+  
+  // Status filter states
+  const [companyStatusFilter, setCompanyStatusFilter] = useState('all');
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
+  const [alertStatusFilter, setAlertStatusFilter] = useState('all');
+  const [alertSeverityFilter, setAlertSeverityFilter] = useState('all');
 
   const complianceData = [
     { month: 'Jun', rate: 90 },
@@ -32,18 +50,302 @@ function RegulatorDashboard() {
     { month: 'Nov', emissions: 380000 }
   ];
 
+  // Company data
+  const companiesData = [
+    { 
+      name: 'Tiger Industries', 
+      compliance: 94, 
+      emissions: '360,333', 
+      status: 'compliant', 
+      documents: 3, 
+      lastSubmission: '2024-10-15',
+      lastReport: '2 days ago'
+    },
+    { 
+      name: 'Coastal Petrochemical', 
+      compliance: 91, 
+      emissions: '420,500', 
+      status: 'compliant', 
+      documents: 2, 
+      lastSubmission: '2024-10-12',
+      lastReport: '1 week ago'
+    },
+    { 
+      name: 'Delta Refining Co.', 
+      compliance: 88, 
+      emissions: '385,200', 
+      status: 'attention', 
+      documents: 1, 
+      lastSubmission: '2024-09-28',
+      lastReport: 'Overdue'
+    },
+    { 
+      name: 'Louisiana Carbon Solutions', 
+      compliance: 96, 
+      emissions: '310,800', 
+      status: 'compliant', 
+      documents: 4, 
+      lastSubmission: '2024-10-18',
+      lastReport: '1 day ago'
+    },
+    { 
+      name: 'Gulf Coast Manufacturing', 
+      compliance: 93, 
+      emissions: '395,100', 
+      status: 'compliant', 
+      documents: 2, 
+      lastSubmission: '2024-10-16',
+      lastReport: '3 days ago'
+    },
+    { 
+      name: 'Sasol Chemicals', 
+      compliance: 89, 
+      emissions: '360,333', 
+      status: 'attention', 
+      documents: 5, 
+      lastSubmission: '2024-10-20',
+      lastReport: '1 day ago'
+    }
+  ];
+
+  // Submissions data
+  const submissionsData = [
+    { 
+      company: 'Tiger Industries', 
+      document: 'Q3_Emissions_Report.pdf', 
+      type: 'Quarterly Report', 
+      submitted: '2024-10-15', 
+      status: 'approved',
+      reviewer: 'J. Smith'
+    },
+    { 
+      company: 'Louisiana Carbon Solutions', 
+      document: 'Plant_Efficiency_Analysis.xlsx', 
+      type: 'Efficiency Report', 
+      submitted: '2024-10-18', 
+      status: 'under_review',
+      reviewer: 'Pending'
+    },
+    { 
+      company: 'Gulf Coast Manufacturing', 
+      document: 'Safety_Protocol_Update.pdf', 
+      type: 'Safety Documentation', 
+      submitted: '2024-10-16', 
+      status: 'under_review',
+      reviewer: 'A. Johnson'
+    },
+    { 
+      company: 'Coastal Petrochemical', 
+      document: 'Emissions_Monitoring_Data.csv', 
+      type: 'Monitoring Data', 
+      submitted: '2024-10-12', 
+      status: 'approved',
+      reviewer: 'M. Davis'
+    },
+    { 
+      company: 'Delta Refining Co.', 
+      document: 'Q3_Compliance_Report.pdf', 
+      type: 'Quarterly Report', 
+      submitted: '2024-09-28', 
+      status: 'overdue',
+      reviewer: 'Required'
+    },
+    { 
+      company: 'Sasol Chemicals (Louisiana)', 
+      document: 'Facility_Emissions_Analysis.pdf', 
+      type: 'Quarterly Report', 
+      submitted: '2024-10-20', 
+      status: 'under_review',
+      reviewer: 'R. Wilson'
+    }
+  ];
+
+  // Alerts data
+  const alertsData = [
+    {
+      id: 1,
+      type: 'High Emissions',
+      company: 'Delta Refining Co.',
+      severity: 'high',
+      description: 'CO2 emissions exceeded daily limit by 15%',
+      timestamp: '2024-10-20 14:30',
+      status: 'active'
+    },
+    {
+      id: 2,
+      type: 'Missing Report',
+      company: 'Gulf Coast Manufacturing',
+      severity: 'medium',
+      description: 'Monthly compliance report overdue by 3 days',
+      timestamp: '2024-10-19 09:15',
+      status: 'pending'
+    },
+    {
+      id: 3,
+      type: 'Equipment Failure',
+      company: 'Coastal Petrochemical',
+      severity: 'high',
+      description: 'Primary scrubber system offline - immediate attention required',
+      timestamp: '2024-10-18 16:45',
+      status: 'active'
+    },
+    {
+      id: 4,
+      type: 'Compliance Review',
+      company: 'Tiger Industries',
+      severity: 'low',
+      description: 'Scheduled quarterly review due next week',
+      timestamp: '2024-10-17 11:20',
+      status: 'scheduled'
+    },
+    {
+      id: 5,
+      type: 'Permit Renewal',
+      company: 'Louisiana Carbon Solutions',
+      severity: 'medium',
+      description: 'Operating permit expires in 30 days',
+      timestamp: '2024-10-16 08:30',
+      status: 'pending'
+    }
+  ];
+
+  // Filter functions
+  const filteredCompanies = companiesData.filter(company => {
+    const matchesSearch = company.name.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+      company.status.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+      company.emissions.includes(companySearchTerm);
+    const matchesStatus = companyStatusFilter === 'all' || company.status === companyStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredSubmissions = submissionsData.filter(submission => {
+    const matchesSearch = submission.company.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
+      submission.document.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
+      submission.type.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
+      submission.status.toLowerCase().includes(submissionSearchTerm.toLowerCase());
+    const matchesStatus = submissionStatusFilter === 'all' || submission.status === submissionStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredAlerts = alertsData.filter(alert => {
+    const matchesSearch = alert.company.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
+      alert.type.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
+      alert.description.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
+      alert.severity.toLowerCase().includes(alertSearchTerm.toLowerCase());
+    const matchesStatus = alertStatusFilter === 'all' || alert.status === alertStatusFilter;
+    const matchesSeverity = alertSeverityFilter === 'all' || alert.severity === alertSeverityFilter;
+    return matchesSearch && matchesStatus && matchesSeverity;
+  });
+
   useEffect(() => {
     setTimeout(() => setLoading(false), 800);
   }, []);
 
-  // Handle alert actions
-  const handleAlertAction = (alert) => {
-    alert(`Reviewing alert: ${alert.company}\n${alert.message}\n\nThis would normally open a detailed investigation interface.`);
+  // Enhanced interactive handlers
+  const handleCompanyClick = (company) => {
+    let facilities = [];
+    
+    // Set specific facilities for Sasol Chemicals based on the dashboard data
+    if (company.name === 'Sasol Chemicals (Louisiana)' || company.name === 'Sasol Chemicals') {
+      facilities = [
+        { name: 'Lake Charles Complex', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '180,500', status: 'Optimal' },
+        { name: 'Westlake Facility', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '145,200', status: 'Optimal' },
+        { name: 'Sulfur Operations', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '34,633', status: 'Needs Attention' }
+      ];
+    } else {
+      facilities = [
+        { name: 'Main Plant', location: 'Baton Rouge, LA', emissions: Math.round(company.emissions * 0.6), status: 'Active' },
+        { name: 'Processing Unit B', location: 'New Orleans, LA', emissions: Math.round(company.emissions * 0.4), status: 'Active' }
+      ];
+    }
+    
+    setSelectedCompany({
+      ...company,
+      facilities: facilities,
+      recentDocuments: [
+        { name: 'Monthly Emissions Report', date: '2024-10-15', status: 'Approved' },
+        { name: 'Compliance Certificate', date: '2024-09-30', status: 'Under Review' },
+        { name: 'Environmental Impact Study', date: '2024-09-15', status: 'Approved' }
+      ],
+      violations: company.status === 'attention' ? [
+        { date: '2024-09-28', type: 'Late Report Submission', severity: 'Minor', resolved: false },
+        { date: '2024-08-15', type: 'Emissions Threshold Exceeded', severity: 'Major', resolved: true }
+      ] : []
+    });
   };
 
-  // Handle document review
   const handleDocumentReview = (submission) => {
-    alert(`Reviewing document: ${submission.document}\nCompany: ${submission.company}\nType: ${submission.type}\n\nThis would normally open a document viewer and review interface.`);
+    setSelectedSubmission({
+      ...submission,
+      details: {
+        fileSize: '2.4 MB',
+        pages: 15,
+        submittedBy: 'Environmental Officer',
+        reviewDeadline: '2024-10-25',
+        complianceIssues: submission.status === 'under_review' ? [
+          'Missing signature on page 12',
+          'Incomplete emissions data for facility B'
+        ] : []
+      }
+    });
+  };
+
+  const handleAlertAction = (alert) => {
+    setSelectedAlert({
+      ...alert,
+      details: {
+        reportedBy: 'Automated Monitoring System',
+        affectedFacilities: alert.severity === 'high' ? 2 : 1,
+        estimatedImpact: alert.severity === 'high' ? 'High' : 'Medium',
+        recommendedActions: [
+          'Immediate compliance review',
+          'Schedule facility inspection',
+          'Request corrective action plan'
+        ]
+      }
+    });
+  };
+
+  const handleApproveDocument = () => {
+    if (!reviewComment.trim()) {
+      alert('Please provide review comments before approving.');
+      return;
+    }
+    alert(`Document approved for ${selectedSubmission.company}\nReview: ${reviewComment}`);
+    setSelectedSubmission(null);
+    setReviewComment('');
+  };
+
+  const handleRejectDocument = () => {
+    if (!reviewComment.trim()) {
+      alert('Please provide reasons for rejection.');
+      return;
+    }
+    alert(`Document rejected for ${selectedSubmission.company}\nReason: ${reviewComment}`);
+    setSelectedSubmission(null);
+    setReviewComment('');
+  };
+
+  const handleScheduleInspection = () => {
+    if (!inspectionDate) {
+      alert('Please select an inspection date.');
+      return;
+    }
+    alert(`Inspection scheduled for ${selectedCompany.name} on ${inspectionDate}`);
+    setShowInspectionModal(false);
+    setSelectedCompany(null);
+    setInspectionDate('');
+  };
+
+  const handleEnforcementAction = () => {
+    if (!enforcementAction.trim()) {
+      alert('Please specify enforcement action details.');
+      return;
+    }
+    alert(`Enforcement action initiated for ${selectedCompany.name}\nAction: ${enforcementAction}`);
+    setShowEnforcementModal(false);
+    setSelectedCompany(null);
+    setEnforcementAction('');
   };
 
   // Handle chat functionality
@@ -87,9 +389,9 @@ function RegulatorDashboard() {
     <div className="regulator-dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <div className="logo-icon">CS</div>
+          <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <div className="header-info">
-            <h2>Regulator Dashboard</h2>
+            <h2>Welcome back,</h2>
             <p>Louisiana Department of Environmental Quality</p>
           </div>
         </div>
@@ -100,15 +402,15 @@ function RegulatorDashboard() {
 
       <div className="dashboard-content">
         <div className="metrics-grid">
-          <div className="metric-card">
+          <div className="metric-card clickable-card" onClick={() => setActiveTab('companies')}>
             <div className="metric-header">
               <span className="metric-label">Total Companies</span>
               <svg className="metric-icon" viewBox="0 0 24 24" fill="none">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </div>
-            <div className="metric-value">5</div>
-            <div className="metric-subtitle">12 facilities</div>
+            <div className="metric-value">6</div>
+            <div className="metric-subtitle">15 facilities • Click to view</div>
           </div>
 
           <div className="metric-card">
@@ -134,7 +436,7 @@ function RegulatorDashboard() {
             <div className="metric-change positive">↑ 2% improvement</div>
           </div>
 
-          <div className="metric-card warning">
+          <div className="metric-card warning clickable-card" onClick={() => setActiveTab('alerts')}>
             <div className="metric-header">
               <span className="metric-label">Active Alerts</span>
               <svg className="metric-icon" viewBox="0 0 24 24" fill="none">
@@ -144,7 +446,7 @@ function RegulatorDashboard() {
               </svg>
             </div>
             <div className="metric-value">3</div>
-            <div className="metric-alert">2 need attention</div>
+            <div className="metric-alert">2 need attention • Click to review</div>
           </div>
         </div>
 
@@ -173,69 +475,9 @@ function RegulatorDashboard() {
           >
             Alerts
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'climate-data' ? 'active' : ''}`}
-            onClick={() => setActiveTab('climate-data')}
-          >
-            External Data
-          </button>
         </div>
 
-        <div className="charts-section">
-          <div className="chart-card">
-            <h3>Statewide Compliance Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={complianceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
-                <XAxis dataKey="month" stroke="#8892b0" />
-                <YAxis stroke="#8892b0" domain={[75, 100]} />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#1a1f3a', 
-                    border: '1px solid #a78bfa',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }} 
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="rate" 
-                  name="Compliance Rate %" 
-                  stroke="#a78bfa" 
-                  strokeWidth={3} 
-                  dot={{ r: 5, fill: '#a78bfa' }} 
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="chart-card">
-            <h3>Total Emissions Trend (Tons/day)</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={emissionsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
-                <XAxis dataKey="month" stroke="#8892b0" />
-                <YAxis stroke="#8892b0" />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#1a1f3a', 
-                    border: '1px solid #34d3fd',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }} 
-                />
-                <Legend />
-                <Bar 
-                  dataKey="emissions" 
-                  fill="#34d3fd" 
-                  name="Daily Emissions" 
-                  radius={[8, 8, 0, 0]} 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        {/* charts moved to bottom */}
 
         {activeTab === 'overview' && (
           <div className="overview-section">
@@ -247,9 +489,11 @@ function RegulatorDashboard() {
                   { name: 'Coastal Petrochemical', compliance: 91, emissions: '420,500', status: 'compliant' },
                   { name: 'Delta Refining Co.', compliance: 88, emissions: '385,200', status: 'attention' },
                   { name: 'Louisiana Carbon Solutions', compliance: 96, emissions: '310,800', status: 'compliant' },
-                  { name: 'Gulf Coast Manufacturing', compliance: 93, emissions: '395,100', status: 'compliant' }
-                ].map((company, index) => (
-                  <div key={index} className="company-item">
+                  { name: 'Gulf Coast Manufacturing', compliance: 93, emissions: '395,100', status: 'compliant' },
+                  { name: 'Sasol Chemicals (Louisiana)', compliance: 89, emissions: '360,333', status: 'attention' }
+                ]
+                .map((company, index) => (
+                  <div key={index} className="company-item clickable-item" onClick={() => handleCompanyClick(company)}>
                     <div className="company-info">
                       <h4>{company.name}</h4>
                       <p>{company.emissions} tons CO₂/day</p>
@@ -263,8 +507,69 @@ function RegulatorDashboard() {
                         {company.status === 'compliant' ? '✓ Compliant' : '⚠ Needs Attention'}
                       </span>
                     </div>
+                    <div className="click-hint">Click for details</div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Spacer to push charts lower */}
+            <div style={{ height: '50px' }}></div>
+            
+            {/* Charts in Overview tab only */}
+            <div className="charts-section">
+              <div className="chart-card">
+                <h3>Statewide Compliance Trend</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={complianceData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
+                    <XAxis dataKey="month" stroke="#8892b0" />
+                    <YAxis stroke="#8892b0" domain={[75, 100]} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        background: '#1a1f3a', 
+                        border: '1px solid #a78bfa',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }} 
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="rate" 
+                      name="Compliance Rate %" 
+                      stroke="#a78bfa" 
+                      strokeWidth={3} 
+                      dot={{ r: 5, fill: '#a78bfa' }} 
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="chart-card">
+                <h3>Total Emissions Trend (Tons/day)</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={emissionsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
+                    <XAxis dataKey="month" stroke="#8892b0" />
+                    <YAxis stroke="#8892b0" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        background: '#1a1f3a', 
+                        border: '1px solid #34d3fd',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }} 
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="emissions" 
+                      fill="#34d3fd" 
+                      name="Daily Emissions" 
+                      radius={[8, 8, 0, 0]} 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -272,83 +577,40 @@ function RegulatorDashboard() {
 
         {activeTab === 'companies' && (
           <div className="companies-section">
-            <h3>Company Management</h3>
-            <div className="companies-grid">
-              {[
-                { name: 'Tiger Industries', compliance: 94, emissions: '360,333', lastReport: '2 days ago', status: 'compliant' },
-                { name: 'Coastal Petrochemical', compliance: 91, emissions: '420,500', lastReport: '1 week ago', status: 'compliant' },
-                { name: 'Delta Refining Co.', compliance: 88, emissions: '385,200', lastReport: 'Overdue', status: 'attention' },
-                { name: 'Louisiana Carbon Solutions', compliance: 96, emissions: '310,800', lastReport: '1 day ago', status: 'compliant' },
-                { name: 'Gulf Coast Manufacturing', compliance: 93, emissions: '395,100', lastReport: '3 days ago', status: 'compliant' }
-              ].map((company, index) => (
-                <div key={index} className="company-detail-card">
-                  <div className="company-header">
-                    <h4>{company.name}</h4>
-                    <span className={`status-badge ${company.status}`}>
-                      {company.status === 'compliant' ? '✓' : '⚠'}
-                    </span>
-                  </div>
-                  <div className="company-metrics">
-                    <div className="metric">
-                      <span className="metric-label">Compliance</span>
-                      <span className="metric-value">{company.compliance}%</span>
-                    </div>
-                    <div className="metric">
-                      <span className="metric-label">Daily Emissions</span>
-                      <span className="metric-value">{company.emissions}</span>
-                    </div>
-                    <div className="metric">
-                      <span className="metric-label">Last Report</span>
-                      <span className={`metric-value ${company.lastReport === 'Overdue' ? 'overdue' : ''}`}>
-                        {company.lastReport}
-                      </span>
-                    </div>
-                  </div>
-                  <button className="company-action-btn">View Details</button>
+            <div className="companies-header">
+              <h3>Registered Companies</h3>
+              <div className="header-controls">
+                <div className="filter-container">
+                  <select
+                    value={companyStatusFilter}
+                    onChange={(e) => setCompanyStatusFilter(e.target.value)}
+                    className="status-filter"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="compliant">Compliant</option>
+                    <option value="attention">Needs Attention</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'submissions' && (
-          <div className="submissions-section">
-            <h3>Recent Submissions</h3>
-            <div className="submissions-list">
-              {[
-                { company: 'Tiger Industries', type: 'Quarterly Report', date: '2024-10-19', status: 'approved' },
-                { company: 'Louisiana Carbon Solutions', type: 'Monthly Data', date: '2024-10-18', status: 'approved' },
-                { company: 'Gulf Coast Manufacturing', type: 'Incident Report', date: '2024-10-17', status: 'under_review' },
-                { company: 'Coastal Petrochemical', type: 'Maintenance Notice', date: '2024-10-16', status: 'approved' },
-                { company: 'Delta Refining Co.', type: 'Quarterly Report', date: 'Pending', status: 'overdue' }
-              ].map((submission, index) => (
-                <div key={index} className={`submission-item ${submission.status}`}>
-                  <div className="submission-info">
-                    <h4>{submission.company}</h4>
-                    <p>{submission.type}</p>
-                    <span className="submission-date">{submission.date}</span>
-                  </div>
-                  <span className={`submission-status ${submission.status}`}>
-                    {submission.status.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <button className="submission-action-btn">Review</button>
+                <div className="search-container">
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={companySearchTerm}
+                    onChange={(e) => setCompanySearchTerm(e.target.value)}
+                    className="company-search-input"
+                  />
+                  <span className="search-icon">🔍</span>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'companies' && (
-          <div className="companies-section">
-            <h3>Registered Companies</h3>
+            {filteredCompanies.length === 0 && companySearchTerm && (
+              <div className="no-results">
+                <p>No companies found matching "{companySearchTerm}"</p>
+                <p className="search-hint">Try searching by company name, compliance status, or emissions data</p>
+              </div>
+            )}
             <div className="companies-grid">
-              {[
-                { name: 'Tiger Industries', compliance: 94, emissions: '360,333', status: 'compliant', documents: 3, lastSubmission: '2024-10-15' },
-                { name: 'Coastal Petrochemical', compliance: 91, emissions: '420,500', status: 'compliant', documents: 2, lastSubmission: '2024-10-12' },
-                { name: 'Delta Refining Co.', compliance: 88, emissions: '385,200', status: 'attention', documents: 1, lastSubmission: '2024-09-28' },
-                { name: 'Louisiana Carbon Solutions', compliance: 96, emissions: '310,800', status: 'compliant', documents: 4, lastSubmission: '2024-10-18' },
-                { name: 'Gulf Coast Manufacturing', compliance: 93, emissions: '395,100', status: 'compliant', documents: 2, lastSubmission: '2024-10-16' }
-              ].map((company, index) => (
+              {filteredCompanies.map((company, index) => (
                 <div key={index} className="company-detail-card">
                   <div className="company-header">
                     <h4>{company.name}</h4>
@@ -362,12 +624,18 @@ function RegulatorDashboard() {
                       <span className="metric-value">{company.compliance}%</span>
                     </div>
                     <div className="metric">
-                      <span className="metric-label">Emissions</span>
+                      <span className="metric-label">Daily Emissions</span>
                       <span className="metric-value">{company.emissions} t/day</span>
                     </div>
                     <div className="metric">
                       <span className="metric-label">Documents</span>
                       <span className="metric-value">{company.documents} files</span>
+                    </div>
+                    <div className="metric">
+                      <span className="metric-label">Last Report</span>
+                      <span className={`metric-value ${company.lastReport === 'Overdue' ? 'overdue' : ''}`}>
+                        {company.lastReport}
+                      </span>
                     </div>
                     <div className="metric">
                       <span className="metric-label">Last Submission</span>
@@ -376,12 +644,17 @@ function RegulatorDashboard() {
                       </span>
                     </div>
                   </div>
-                  <button 
-                    className="company-action-btn"
-                    onClick={() => setActiveTab('submissions')}
-                  >
-                    View Documents
-                  </button>
+                  <div className="company-actions">
+                    <button className="company-action-btn primary" onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompanyClick(company);
+                    }}>
+                      View Details
+                    </button>
+                    <button className="company-action-btn secondary" onClick={() => setActiveTab('submissions')}>
+                      View Documents
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -390,50 +663,41 @@ function RegulatorDashboard() {
 
         {activeTab === 'submissions' && (
           <div className="submissions-section">
-            <h3>Document Submissions</h3>
+            <div className="submissions-header">
+              <h3>Document Submissions</h3>
+              <div className="header-controls">
+                <div className="filter-container">
+                  <select
+                    value={submissionStatusFilter}
+                    onChange={(e) => setSubmissionStatusFilter(e.target.value)}
+                    className="status-filter"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="under_review">Under Review</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </div>
+                <div className="search-container">
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={submissionSearchTerm}
+                    onChange={(e) => setSubmissionSearchTerm(e.target.value)}
+                    className="submission-search-input"
+                  />
+                  <span className="search-icon">🔍</span>
+                </div>
+              </div>
+            </div>
+            {filteredSubmissions.length === 0 && submissionSearchTerm && (
+              <div className="no-results">
+                <p>No submissions found matching "{submissionSearchTerm}"</p>
+                <p className="search-hint">Try searching by company name, document name, type, or status</p>
+              </div>
+            )}
             <div className="submissions-list">
-              {[
-                { 
-                  company: 'Tiger Industries', 
-                  document: 'Q3_Emissions_Report.pdf', 
-                  type: 'Quarterly Report', 
-                  submitted: '2024-10-15', 
-                  status: 'approved',
-                  reviewer: 'J. Smith'
-                },
-                { 
-                  company: 'Louisiana Carbon Solutions', 
-                  document: 'Plant_Efficiency_Analysis.xlsx', 
-                  type: 'Efficiency Report', 
-                  submitted: '2024-10-18', 
-                  status: 'under_review',
-                  reviewer: 'Pending'
-                },
-                { 
-                  company: 'Gulf Coast Manufacturing', 
-                  document: 'Safety_Protocol_Update.pdf', 
-                  type: 'Safety Documentation', 
-                  submitted: '2024-10-16', 
-                  status: 'under_review',
-                  reviewer: 'A. Johnson'
-                },
-                { 
-                  company: 'Coastal Petrochemical', 
-                  document: 'Emissions_Monitoring_Data.csv', 
-                  type: 'Monitoring Data', 
-                  submitted: '2024-10-12', 
-                  status: 'approved',
-                  reviewer: 'M. Davis'
-                },
-                { 
-                  company: 'Delta Refining Co.', 
-                  document: 'Q3_Compliance_Report.pdf', 
-                  type: 'Quarterly Report', 
-                  submitted: '2024-09-28', 
-                  status: 'overdue',
-                  reviewer: 'Required'
-                }
-              ].map((submission, index) => (
+              {filteredSubmissions.map((submission, index) => (
                 <div key={index} className={`submission-item ${submission.status}`}>
                   <div className="submission-info">
                     <h4>{submission.company}</h4>
@@ -446,7 +710,9 @@ function RegulatorDashboard() {
                        submission.status === 'under_review' ? 'Under Review' : 
                        'Action Required'}
                     </span>
-                    <span className="reviewer">Reviewer: {submission.reviewer}</span>
+                    <div style={{ marginTop: '8px' }}>
+                      <span className="reviewer">Reviewer: {submission.reviewer}</span>
+                    </div>
                   </div>
                   <button 
                     className="submission-action-btn"
@@ -462,13 +728,51 @@ function RegulatorDashboard() {
 
         {activeTab === 'alerts' && (
           <div className="alerts-section">
-            <h3>Active Alerts</h3>
+            <div className="alerts-header">
+              <h3>Active Alerts</h3>
+              <div className="header-controls">
+                <div className="filter-container">
+                  <select
+                    value={alertStatusFilter}
+                    onChange={(e) => setAlertStatusFilter(e.target.value)}
+                    className="status-filter"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="scheduled">Scheduled</option>
+                  </select>
+                  <select
+                    value={alertSeverityFilter}
+                    onChange={(e) => setAlertSeverityFilter(e.target.value)}
+                    className="severity-filter"
+                  >
+                    <option value="all">All Severity</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div className="search-container">
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={alertSearchTerm}
+                    onChange={(e) => setAlertSearchTerm(e.target.value)}
+                    className="alert-search-input"
+                  />
+                  <span className="search-icon">🔍</span>
+                </div>
+              </div>
+            </div>
+            {filteredAlerts.length === 0 && alertSearchTerm && (
+              <div className="no-results">
+                <p>No alerts found matching "{alertSearchTerm}"</p>
+                <p className="search-hint">Try searching by company name, alert type, severity, or description</p>
+              </div>
+            )}
             <div className="alert-items">
-              {[
-                { company: 'Delta Refining Co.', message: 'Q3 compliance report overdue', severity: 'high', date: '2 days ago' },
-                { company: 'Coastal Petrochemical', message: 'Emissions spike detected in monitoring data', severity: 'medium', date: '1 week ago' },
-                { company: 'Tiger Industries', message: 'Upcoming maintenance window notification', severity: 'low', date: '3 days ago' }
-              ].map((alert, index) => (
+              {filteredAlerts.map((alert, index) => (
                 <div key={index} className={`alert-item ${alert.severity}`}>
                   <div className={`alert-icon ${alert.severity}`}>
                     {alert.severity === 'high' && '⚠️'}
@@ -477,21 +781,27 @@ function RegulatorDashboard() {
                   </div>
                   <div className="alert-content">
                     <h4>{alert.company}</h4>
-                    <p>{alert.message}</p>
-                    <span className="alert-date">{alert.date}</span>
+                    <p><strong>{alert.type}:</strong> {alert.description}</p>
+                    <span className="alert-date">{alert.timestamp}</span>
                   </div>
-                  <button className="alert-action-btn" onClick={() => handleAlertAction(alert)}>Review</button>
+                  <div className="alert-status-badge">
+                    <span className={`status-indicator ${alert.status}`}>
+                      {alert.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <button className="alert-action-btn" onClick={() => handleAlertAction(alert)}>
+                    {alert.status === 'active' ? 'Resolve' : alert.status === 'pending' ? 'Review' : 'View'}
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {activeTab === 'climate-data' && (
-          <ClimateTraceData user={{ company: 'Louisiana Regulatory Authority' }} />
-        )}
         
       </div>
+
+
 
       <div className="chat-button" onClick={() => setShowChat(!showChat)}>
         <svg viewBox="0 0 24 24" fill="none">
@@ -525,6 +835,334 @@ function RegulatorDashboard() {
             />
             <button type="submit" className="chat-send">Send</button>
           </form>
+        </div>
+      )}
+
+      {/* Company Details Modal */}
+      {selectedCompany && (
+        <div className="modal-overlay" onClick={() => setSelectedCompany(null)}>
+          <div className="modal-content company-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedCompany.name} - Detailed View</h2>
+              <button className="modal-close" onClick={() => setSelectedCompany(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="company-overview">
+                <div className="overview-stats">
+                  <div className="stat-item">
+                    <span className="stat-label">Compliance Rate</span>
+                    <span className={`stat-value ${selectedCompany.compliance < 90 ? 'warning' : 'success'}`}>
+                      {selectedCompany.compliance}%
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Daily Emissions</span>
+                    <span className="stat-value">{selectedCompany.emissions} tons CO₂</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Status</span>
+                    <span className={`stat-value ${selectedCompany.status}`}>
+                      {selectedCompany.status === 'compliant' ? '✓ Compliant' : '⚠ Needs Attention'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="facilities-section">
+                  <h3>Facilities</h3>
+                  {selectedCompany.facilities?.map((facility, idx) => (
+                    <div key={idx} className="facility-item">
+                      <div className="facility-info">
+                        <h4>{facility.name}</h4>
+                        <p>{facility.location}</p>
+                      </div>
+                      <div className="facility-stats">
+                        <span>{facility.emissions} tons CO₂/day</span>
+                        <span className={`facility-status ${facility.status.toLowerCase()}`}>{facility.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="documents-section">
+                  <h3>Recent Documents</h3>
+                  {selectedCompany.recentDocuments?.map((doc, idx) => (
+                    <div key={idx} className="document-item">
+                      <div className="document-info">
+                        <h4>{doc.name}</h4>
+                        <p>Submitted: {doc.date}</p>
+                      </div>
+                      <span className={`document-status ${doc.status.toLowerCase().replace(' ', '-')}`}>
+                        {doc.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedCompany.violations?.length > 0 && (
+                  <div className="violations-section">
+                    <h3>Compliance Issues</h3>
+                    {selectedCompany.violations.map((violation, idx) => (
+                      <div key={idx} className={`violation-item ${violation.severity.toLowerCase()}`}>
+                        <div className="violation-info">
+                          <h4>{violation.type}</h4>
+                          <p>{violation.date} • {violation.severity} Severity</p>
+                        </div>
+                        <span className={`violation-status ${violation.resolved ? 'resolved' : 'pending'}`}>
+                          {violation.resolved ? '✓ Resolved' : '⚠ Pending'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => setShowInspectionModal(true)}>
+                Schedule Inspection
+              </button>
+              <button className="action-btn primary" onClick={() => setShowEnforcementModal(true)}>
+                Enforcement Action
+              </button>
+              <button className="action-btn warning" onClick={() => {
+                alert(`Compliance notice sent to ${selectedCompany.name}`);
+                setSelectedCompany(null);
+              }}>
+                Send Notice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Review Modal */}
+      {selectedSubmission && (
+        <div className="modal-overlay" onClick={() => setSelectedSubmission(null)}>
+          <div className="modal-content document-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Document Review - {selectedSubmission.company}</h2>
+              <button className="modal-close" onClick={() => setSelectedSubmission(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="document-details">
+                <div className="document-info">
+                  <h3>{selectedSubmission.document || selectedSubmission.type}</h3>
+                  <div className="document-meta">
+                    <p><strong>Submitted:</strong> {selectedSubmission.submitted || selectedSubmission.date}</p>
+                    <p><strong>File Size:</strong> {selectedSubmission.details?.fileSize}</p>
+                    <p><strong>Pages:</strong> {selectedSubmission.details?.pages}</p>
+                    <p><strong>Submitted By:</strong> {selectedSubmission.details?.submittedBy}</p>
+                    <p><strong>Review Deadline:</strong> {selectedSubmission.details?.reviewDeadline}</p>
+                  </div>
+                </div>
+
+                {selectedSubmission.details?.complianceIssues?.length > 0 && (
+                  <div className="compliance-issues">
+                    <h4>Identified Issues:</h4>
+                    <ul>
+                      {selectedSubmission.details.complianceIssues.map((issue, idx) => (
+                        <li key={idx} className="issue-item">{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="review-section">
+                  <label htmlFor="reviewComment">Review Comments:</label>
+                  <textarea
+                    id="reviewComment"
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Enter your review comments, feedback, or reasons for approval/rejection..."
+                    rows="4"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => {
+                alert(`Document preview opened for ${selectedSubmission.company}`);
+              }}>
+                Preview Document
+              </button>
+              <button className="action-btn danger" onClick={handleRejectDocument}>
+                Reject
+              </button>
+              <button className="action-btn success" onClick={handleApproveDocument}>
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Details Modal */}
+      {selectedAlert && (
+        <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
+          <div className="modal-content alert-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Alert Details - {selectedAlert.company}</h2>
+              <button className="modal-close" onClick={() => setSelectedAlert(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="alert-details">
+                <div className={`alert-status ${selectedAlert.severity}`}>
+                  <span className="severity-badge">{selectedAlert.severity.toUpperCase()} PRIORITY</span>
+                  <h3>{selectedAlert.message}</h3>
+                  <p>Reported: {selectedAlert.date}</p>
+                </div>
+
+                <div className="alert-info">
+                  <h4>Additional Information:</h4>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <span className="info-label">Reported By:</span>
+                      <span>{selectedAlert.details?.reportedBy}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="info-label">Affected Facilities:</span>
+                      <span>{selectedAlert.details?.affectedFacilities}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="info-label">Estimated Impact:</span>
+                      <span>{selectedAlert.details?.estimatedImpact}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="recommended-actions">
+                  <h4>Recommended Actions:</h4>
+                  <ul>
+                    {selectedAlert.details?.recommendedActions?.map((action, idx) => (
+                      <li key={idx}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => {
+                alert(`Investigation initiated for ${selectedAlert.company}`);
+                setSelectedAlert(null);
+              }}>
+                Start Investigation
+              </button>
+              <button className="action-btn primary" onClick={() => {
+                alert(`Alert escalated to supervisor for ${selectedAlert.company}`);
+                setSelectedAlert(null);
+              }}>
+                Escalate
+              </button>
+              <button className="action-btn success" onClick={() => {
+                alert(`Alert resolved for ${selectedAlert.company}`);
+                setSelectedAlert(null);
+              }}>
+                Mark Resolved
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inspection Scheduling Modal */}
+      {showInspectionModal && (
+        <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
+          <div className="modal-content inspection-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Schedule Inspection - {selectedCompany?.name}</h2>
+              <button className="modal-close" onClick={() => setShowInspectionModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="inspection-form">
+                <div className="form-group">
+                  <label htmlFor="inspectionDate">Inspection Date:</label>
+                  <input
+                    type="date"
+                    id="inspectionDate"
+                    value={inspectionDate}
+                    onChange={(e) => setInspectionDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Inspection Type:</label>
+                  <select defaultValue="routine">
+                    <option value="routine">Routine Compliance Check</option>
+                    <option value="follow-up">Follow-up Inspection</option>
+                    <option value="complaint">Complaint Investigation</option>
+                    <option value="emergency">Emergency Response</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Priority Level:</label>
+                  <select defaultValue="normal">
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => setShowInspectionModal(false)}>
+                Cancel
+              </button>
+              <button className="action-btn primary" onClick={handleScheduleInspection}>
+                Schedule Inspection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enforcement Action Modal */}
+      {showEnforcementModal && (
+        <div className="modal-overlay" onClick={() => setShowEnforcementModal(false)}>
+          <div className="modal-content enforcement-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Enforcement Action - {selectedCompany?.name}</h2>
+              <button className="modal-close" onClick={() => setShowEnforcementModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="enforcement-form">
+                <div className="form-group">
+                  <label>Action Type:</label>
+                  <select defaultValue="">
+                    <option value="">Select Action Type</option>
+                    <option value="warning">Official Warning</option>
+                    <option value="fine">Monetary Fine</option>
+                    <option value="suspension">License Suspension</option>
+                    <option value="remediation">Mandatory Remediation</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="enforcementAction">Action Details:</label>
+                  <textarea
+                    id="enforcementAction"
+                    value={enforcementAction}
+                    onChange={(e) => setEnforcementAction(e.target.value)}
+                    placeholder="Describe the enforcement action, violations found, and required corrective measures..."
+                    rows="4"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Compliance Deadline:</label>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => setShowEnforcementModal(false)}>
+                Cancel
+              </button>
+              <button className="action-btn danger" onClick={handleEnforcementAction}>
+                Issue Enforcement Action
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
