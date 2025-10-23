@@ -116,7 +116,7 @@ function RegulatorDashboard() {
       type: 'Quarterly Report', 
       submitted: '2024-10-15', 
       status: 'approved',
-      reviewer: 'J. Smith'
+      reviewer: 'Serene Qasem'
     },
     { 
       company: 'Louisiana Carbon Solutions', 
@@ -132,7 +132,7 @@ function RegulatorDashboard() {
       type: 'Safety Documentation', 
       submitted: '2024-10-16', 
       status: 'under_review',
-      reviewer: 'A. Johnson'
+      reviewer: 'Chloe Gray'
     },
     { 
       company: 'Coastal Petrochemical', 
@@ -140,7 +140,7 @@ function RegulatorDashboard() {
       type: 'Monitoring Data', 
       submitted: '2024-10-12', 
       status: 'approved',
-      reviewer: 'M. Davis'
+      reviewer: 'Ibrahim Alam'
     },
     { 
       company: 'Delta Refining Co.', 
@@ -156,7 +156,7 @@ function RegulatorDashboard() {
       type: 'Quarterly Report', 
       submitted: '2024-10-20', 
       status: 'under_review',
-      reviewer: 'R. Wilson'
+      reviewer: 'Jackson Descant'
     }
   ];
 
@@ -482,7 +482,7 @@ function RegulatorDashboard() {
         {activeTab === 'overview' && (
           <div className="overview-section">
             <div className="companies-list">
-              <h3>Registered Companies</h3>
+              <h3>Companies</h3>
               <div className="company-items">
                 {[
                   { name: 'Tiger Industries', compliance: 94, emissions: '360,333', status: 'compliant' },
