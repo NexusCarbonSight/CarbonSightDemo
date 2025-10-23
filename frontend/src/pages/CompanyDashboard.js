@@ -253,61 +253,70 @@ function CompanyDashboard() {
 
     recommendations: [
       {
-        title: 'Investigate Sulfur Operations Emissions Increase',
-        description: 'The Sulfur Operations facility has shown a 5% increase in emissions over the past month. This trend requires immediate investigation to identify root causes and prevent potential compliance issues with Louisiana DEQ air quality standards.',
+        title: 'Optimize Transportation Fleet',
+        description: 'Transition to hybrid and electric vehicles for on-site transportation and material delivery. Analysis shows significant potential for emissions reduction through fleet modernization, including replacing diesel trucks with electric alternatives and implementing route optimization software.',
         impact: 'high',
-        category: 'Operational Efficiency',
-        action: '5% emission reduction potential',
-        facility: 'Sulfur Operations',
-        detailedSteps: [
-          'Conduct comprehensive equipment inspection focusing on sulfur recovery units',
-          'Review operational parameters for the past 60 days to identify deviations',
-          'Analyze maintenance logs for recent equipment changes or repairs',
-          'Schedule stack testing to verify CEMS accuracy',
-          'Implement corrective actions based on findings'
-        ],
-        timeline: '2-3 weeks',
-        estimatedCost: '$45,000 - $65,000',
-        complianceImpact: 'Critical - May affect Title V permit compliance if unresolved',
-        environmentalBenefit: 'Reduce local air quality impact in Westlake area'
-      },
-      {
-        title: 'Optimize Lake Charles Complex Energy Usage',
-        description: 'Recent energy audit identified opportunities to reduce natural gas consumption by 8% through process optimization. This would directly lower CO₂ emissions and operational costs while improving Louisiana energy efficiency metrics.',
-        impact: 'high',
-        category: 'Energy Efficiency',
-        action: '8% energy reduction, $2.1M annual savings',
-        facility: 'Lake Charles Complex',
-        detailedSteps: [
-          'Install variable frequency drives on major compressor units',
-          'Optimize heat recovery systems in ethylene production',
-          'Implement advanced process control for steam generation',
-          'Upgrade insulation on high-temperature process lines',
-          'Train operations staff on energy-efficient operating procedures'
-        ],
-        timeline: '4-6 months',
-        estimatedCost: '$850,000 (18-month payback)',
-        complianceImpact: 'Positive - May qualify for Louisiana Energy Efficiency credits',
-        environmentalBenefit: 'Reduce CO₂ emissions by 14,440 tons/year'
-      },
-      {
-        title: 'Accelerate Title V Permit Renewal Process',
-        description: 'Current Title V permit renewal is 60% complete with a February 1st deadline. Early completion would provide buffer time for Louisiana DEQ review and reduce risk of operational disruptions.',
-        impact: 'medium',
-        category: 'Regulatory Compliance',
-        action: 'Avoid potential permit violations',
+        category: 'Transportation',
+        action: '1,200 tons CO₂/year',
         facility: 'All Facilities',
         detailedSteps: [
-          'Prioritize completion of updated facility diagrams by Nov 15',
-          'Fast-track emissions modeling report with third-party consultant',
-          'Prepare public notice documentation and coordinate with parish officials',
-          'Schedule internal review meeting with legal and environmental teams',
-          'Submit complete application package by Dec 15 (6 weeks early)'
+          'Conduct comprehensive fleet audit to identify high-emission vehicles for replacement',
+          'Evaluate electric and hybrid vehicle options suitable for chemical facility operations',
+          'Install EV charging infrastructure at Lake Charles Complex and Westlake Facility',
+          'Implement route optimization software to reduce fuel consumption',
+          'Train drivers on eco-driving techniques and new vehicle technology',
+          'Establish partnership with local EV dealers for maintenance support'
         ],
-        timeline: '4-6 weeks',
-        estimatedCost: '$25,000 (consultant acceleration fees)',
-        complianceImpact: 'High - Ensures continuous operating authority',
-        environmentalBenefit: 'Maintains transparency with Calcasieu Parish community'
+        timeline: '6-12 months',
+        estimatedCost: '$150,000 - $300,000',
+        expectedBenefit: '40% reduction in fleet emissions',
+        complianceImpact: 'This initiative directly supports Louisiana\'s Clean Energy Initiative and positions Sasol Chemicals as a leader in sustainable operations. The fleet modernization will contribute to meeting EPA greenhouse gas reporting requirements under 40 CFR Part 98, potentially qualifying the company for state-level green energy incentives. Additionally, reduced emissions from transportation will help maintain compliance with Louisiana DEQ air quality standards in Calcasieu Parish, demonstrating corporate responsibility to local communities and regulators.',
+        environmentalBenefit: 'Fleet optimization will eliminate approximately 1,200 tons of CO₂ emissions annually, equivalent to removing 260 passenger vehicles from the road. Beyond carbon reduction, the transition to electric vehicles will significantly decrease nitrogen oxide (NOx) and particulate matter emissions in the Lake Charles area, improving local air quality for nearby communities in ZIP codes 70669, 70611, and 70605. This initiative also reduces noise pollution and demonstrates Sasol\'s commitment to environmental stewardship in the Gulf Coast region.'
+      },
+      {
+        title: 'Implement Energy Management System',
+        description: 'Deploy an advanced Energy Management System (EMS) with real-time monitoring and AI-powered optimization across all facilities. The system will identify energy waste, optimize equipment scheduling, and provide actionable insights for reducing electricity and natural gas consumption.',
+        impact: 'medium',
+        category: 'Energy Efficiency',
+        action: '800 tons CO₂/year',
+        facility: 'Lake Charles Complex',
+        detailedSteps: [
+          'Select and procure enterprise-grade Energy Management System platform',
+          'Install IoT sensors and smart meters across critical equipment and processes',
+          'Integrate EMS with existing SCADA and plant control systems',
+          'Configure AI algorithms for predictive energy optimization',
+          'Establish baseline energy consumption metrics for all operations',
+          'Train operations and maintenance staff on EMS dashboard and analytics',
+          'Implement automated alerts for energy anomalies and optimization opportunities'
+        ],
+        timeline: '8-10 months',
+        estimatedCost: '$200,000 - $400,000',
+        expectedBenefit: '12-15% reduction in energy costs',
+        complianceImpact: 'Implementation of an Energy Management System aligns with EPA Energy Star certification requirements and supports compliance with Louisiana Act 517 promoting industrial energy efficiency. The EMS will provide detailed documentation of energy consumption patterns, which is valuable for regulatory reporting under Louisiana DEQ\'s emissions inventory requirements. Real-time monitoring capabilities will enable faster response to potential permit exceedances, reducing the risk of violations and demonstrating proactive environmental management to state and federal regulators.',
+        environmentalBenefit: 'The Energy Management System will reduce annual CO₂ emissions by approximately 800 tons through optimized energy consumption and reduced waste. By identifying and eliminating inefficiencies in steam generation, compressed air systems, and process heating, the facility will significantly decrease its carbon footprint while lowering operational costs. The system\'s predictive capabilities will prevent energy spikes that contribute to grid stress during peak demand periods, supporting regional energy stability. This initiative showcases how technology-driven solutions can achieve both environmental and economic benefits in petrochemical operations.'
+      },
+      {
+        title: 'Renewable Energy Transition',
+        description: 'Develop on-site renewable energy generation through solar panel installation and explore partnership opportunities for wind energy procurement. This comprehensive approach includes rooftop and ground-mounted solar arrays, combined with renewable energy credits (RECs) to offset remaining fossil fuel consumption.',
+        impact: 'high',
+        category: 'Renewable Energy',
+        action: '2,100 tons CO₂/year',
+        facility: 'Westlake Facility',
+        detailedSteps: [
+          'Conduct solar feasibility study for available roof and land space at Westlake Facility',
+          'Engage renewable energy consultants to design optimal solar array configuration',
+          'Secure permits and approvals from Louisiana Public Service Commission',
+          'Install 2MW solar photovoltaic system on warehouse rooftops and available land',
+          'Establish power purchase agreement (PPA) with regional wind energy provider',
+          'Integrate renewable energy sources with existing electrical infrastructure',
+          'Implement battery storage system for energy resilience during grid disruptions',
+          'Monitor and report renewable energy generation through dedicated dashboard'
+        ],
+        timeline: '12-18 months',
+        estimatedCost: '$1,500,000 - $2,200,000',
+        expectedBenefit: '18% of facility energy from renewables',
+        complianceImpact: 'The renewable energy transition strongly supports Louisiana\'s commitment to the Climate Action Plan and positions Sasol Chemicals favorably for future carbon pricing mechanisms. Installation of on-site solar generation demonstrates compliance with evolving corporate sustainability reporting standards (GRI, CDP, TCFD) increasingly required by investors and stakeholders. This initiative may qualify the facility for federal Investment Tax Credits (ITC) and Louisiana\'s renewable energy incentive programs, while also contributing to the company\'s Scope 2 emissions reduction targets under EPA greenhouse gas reporting requirements. The project enhances regulatory standing and builds goodwill with Louisiana DEQ.',
+        environmentalBenefit: 'Renewable energy implementation will eliminate approximately 2,100 tons of CO₂ emissions annually, representing the largest single carbon reduction initiative among the three recommendations. The 2MW solar installation will generate clean electricity equivalent to powering 300 homes, while reducing reliance on fossil fuel-based grid power during Louisiana\'s peak summer months. This transition supports regional air quality improvements by decreasing demand on natural gas power plants, which are significant sources of NOx and SO₂ emissions. Furthermore, the project demonstrates industrial leadership in renewable energy adoption and serves as a model for other petrochemical facilities in the Gulf Coast region, contributing to broader climate change mitigation efforts.'
       }
     ]
   };
@@ -316,15 +325,13 @@ function CompanyDashboard() {
   const fetchAIInsights = async () => {
     setAiLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/ai/quick-insights/`);
-      if (response.ok) {
-        const data = await response.json();
-        setAiRecommendations(data.recommendations || []);
-        setAiInsights({
-          trendAnalysis: data.trend_analysis,
-          keyInsights: data.key_insights || []
-        });
-      }
+      // Use hardcoded recommendations instead of API call
+      // This ensures all modal data (timeline, cost, benefit, compliance, environmental) is populated
+      setAiRecommendations(dashboardData.recommendations);
+      setAiInsights({
+        trendAnalysis: null,
+        keyInsights: []
+      });
     } catch (error) {
       console.error('Failed to fetch AI insights:', error);
       // Fallback to existing static recommendations
@@ -967,7 +974,7 @@ function CompanyDashboard() {
                 </div>
                 <div className="detail-box">
                   <div className="detail-box-label">Expected Benefit</div>
-                  <div className="detail-box-value">{selectedRecommendation.action}</div>
+                  <div className="detail-box-value">{selectedRecommendation.expectedBenefit || selectedRecommendation.action}</div>
                 </div>
               </div>
 
