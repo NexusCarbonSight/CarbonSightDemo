@@ -13,7 +13,7 @@ function CompanySignIn() {
     setError('');
 
     // ✅ Demo credentials
-    if (username === 'tiger' && password === 'industries123') {
+    if (username === 'sasolla' && password === 'industries123') {
       sessionStorage.setItem('company_authed', 'true'); // session flag
       navigate('/company'); // protected route
     } else {
