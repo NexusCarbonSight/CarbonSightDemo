@@ -1,53 +1,60 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './HomePage.css';
+import './SignIn.css';
 
-export default function RegulatorSignIn() {
-  const [u, setU] = useState('');
-  const [p, setP] = useState('');
-  const [err, setErr] = useState('');
+function RegulatorSignIn() {
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const submit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    // hardcoded regulator creds
-    if (u === 'regulator' && p === 'admin123') {
-      navigate('/regulator'); // existing RegulatorDashboard route
+    setError('');
+
+    // ✅ Demo credentials
+    if (username === 'regulator' && password === 'admin123') {
+      sessionStorage.setItem('regulator_authed', 'true'); // session flag
+      navigate('/regulator'); // protected route
     } else {
-      setErr('Invalid username or password');
+      setError('Invalid credentials. Please try again.');
     }
   };
 
   return (
-    <div className="home-content" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <div className="portal-card regulator-portal" style={{ maxWidth: 360, width: '100%' }}>
-        <h3 style={{ marginBottom: 16 }}>Regulator Sign In</h3>
-        <form onSubmit={submit}>
+    <div className="signin-page">
+      <div className="signin-container">
+        <h2>Regulator Sign In</h2>
+        <p>Access your monitoring and compliance dashboard</p>
+        <form onSubmit={handleSubmit} className="signin-form">
+          <label>Username</label>
           <input
             type="text"
-            placeholder="Username"
-            value={u}
-            onChange={(e) => setU(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter regulator username"
             required
-            style={{ width: '100%', padding: 10, borderRadius: 8, marginBottom: 10, border: '1px solid rgba(255,255,255,0.1)' }}
           />
+          <label>Password</label>
           <input
             type="password"
-            placeholder="Password"
-            value={p}
-            onChange={(e) => setP(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
             required
-            style={{ width: '100%', padding: 10, borderRadius: 8, marginBottom: 10, border: '1px solid rgba(255,255,255,0.1)' }}
           />
-          {err && <div style={{ color: '#f87171', marginBottom: 10 }}>{err}</div>}
-          <button type="submit" className="portal-btn regulator-btn" style={{ width: '100%' }}>
+          {error && <div className="error">{error}</div>}
+          <button type="submit" className="signin-btn">
             Sign In
           </button>
         </form>
-        <button className="portal-btn public-btn" style={{ marginTop: 12, width: '100%' }} onClick={() => navigate('/')}>
-          Back to Home
+
+        <button className="back-btn" onClick={() => navigate('/')}>
+          ← Back to Home
         </button>
       </div>
     </div>
   );
 }
+
+export default RegulatorSignIn;

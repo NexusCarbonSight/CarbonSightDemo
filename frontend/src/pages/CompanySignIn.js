@@ -1,54 +1,60 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './HomePage.css'; // reuse your styles for look & feel
+import './SignIn.css';
 
-export default function CompanySignIn() {
-  const [u, setU] = useState('');
-  const [p, setP] = useState('');
-  const [err, setErr] = useState('');
+function CompanySignIn() {
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const submit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    // hardcoded company creds
-    if (u === 'tiger' && p === 'industries123') {
-      localStorage.setItem('company_authed', 'true');
-      navigate('/company'); // go to the existing CompanyDashboard
+    setError('');
+
+    // ✅ Demo credentials
+    if (username === 'tiger' && password === 'industries123') {
+      sessionStorage.setItem('company_authed', 'true'); // session flag
+      navigate('/company'); // protected route
     } else {
-      setErr('Invalid username or password');
+      setError('Invalid credentials. Please try again.');
     }
   };
 
   return (
-    <div className="home-content" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <div className="portal-card company-portal" style={{ maxWidth: 360, width: '100%' }}>
-        <h3 style={{ marginBottom: 16 }}>Company Sign In</h3>
-        <form onSubmit={submit}>
+    <div className="signin-page">
+      <div className="signin-container">
+        <h2>Company Sign In</h2>
+        <p>Access your CarbonSense dashboard</p>
+        <form onSubmit={handleSubmit} className="signin-form">
+          <label>Username</label>
           <input
             type="text"
-            placeholder="Username"
-            value={u}
-            onChange={(e) => setU(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your company username"
             required
-            style={{ width: '100%', padding: 10, borderRadius: 8, marginBottom: 10, border: '1px solid rgba(255,255,255,0.1)' }}
           />
+          <label>Password</label>
           <input
             type="password"
-            placeholder="Password"
-            value={p}
-            onChange={(e) => setP(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
             required
-            style={{ width: '100%', padding: 10, borderRadius: 8, marginBottom: 10, border: '1px solid rgba(255,255,255,0.1)' }}
           />
-          {err && <div style={{ color: '#f87171', marginBottom: 10 }}>{err}</div>}
-          <button type="submit" className="portal-btn company-btn" style={{ width: '100%' }}>
+          {error && <div className="error">{error}</div>}
+          <button type="submit" className="signin-btn">
             Sign In
           </button>
         </form>
-        <button className="portal-btn public-btn" style={{ marginTop: 12, width: '100%' }} onClick={() => navigate('/')}>
-          Back to Home
+
+        <button className="back-btn" onClick={() => navigate('/')}>
+          ← Back to Home
         </button>
       </div>
     </div>
   );
 }
+
+export default CompanySignIn;
