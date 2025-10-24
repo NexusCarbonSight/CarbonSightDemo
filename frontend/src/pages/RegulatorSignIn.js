@@ -13,7 +13,7 @@ function RegulatorSignIn() {
     setError('');
 
     // ✅ Demo credentials
-    if (username === 'regulator' && password === 'admin123') {
+    if (username === 'regulator' && password === 'admin2004') {
       sessionStorage.setItem('regulator_authed', 'true'); // session flag
       navigate('/regulator'); // protected route
     } else {
