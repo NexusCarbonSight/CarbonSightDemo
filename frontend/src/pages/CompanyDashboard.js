@@ -440,7 +440,7 @@ function CompanyDashboard() {
     <div className="company-dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <div className="logo-icon">CS</div>
+          <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <div className="header-info">
             <h2>Welcome back, {dashboardData.company}</h2>
             <p>Your Carbon Capture Dashboard</p>

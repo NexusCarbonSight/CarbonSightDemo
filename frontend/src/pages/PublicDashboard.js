@@ -201,7 +201,7 @@ function PublicDashboard() {
             </svg>
             Back to Home
           </button>
-          <div className="logo-icon">CS</div>
+          <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <h2>Public Dashboard</h2>
         </div>
       </header>
