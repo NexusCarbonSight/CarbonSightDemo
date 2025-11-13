@@ -9,7 +9,7 @@ function HomePage() {
     <div className="home-page">
       <nav className="home-nav">
         <div className="nav-brand">
-          <div className="logo-icon">CS</div>
+          <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <span className="brand-name">CarbonSight</span>
         </div>
         <div className="nav-links">
@@ -40,10 +40,10 @@ function HomePage() {
                 <path d="M9 22V12H15V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h3>Company Sign In</h3>
+            <h3>Company Portal</h3>
             <p>Access your compliance dashboard, track emissions, and manage regulatory requirements.</p>
             <button className="portal-btn company-btn" onClick={() => navigate('/company')}>
-              Company Portal
+              Company Sign In
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -73,10 +73,10 @@ function HomePage() {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h3>Regulator Sign In</h3>
+            <h3>Regulator Portal</h3>
             <p>Monitor compliance across industries, review submissions, and enforce regulations.</p>
             <button className="portal-btn regulator-btn" onClick={() => navigate('/regulator')}>
-              Regulator Portal
+              Regulator Sign In
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
