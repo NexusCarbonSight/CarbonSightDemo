@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './RegulatorDashboard.css';
+import { useAuth } from '../context/AuthContext';
+import { useRegulatorDashboardData } from '../hooks/useRegulatorDashboardData';
 
 function RegulatorDashboard() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const { loading: dataLoading, error: dataError, complianceTrend, emissionsTrend, companies, submissions, alerts } =
+    useRegulatorDashboardData();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showChat, setShowChat] = useState(false);
@@ -32,193 +37,16 @@ function RegulatorDashboard() {
   const [alertStatusFilter, setAlertStatusFilter] = useState('all');
   const [alertSeverityFilter, setAlertSeverityFilter] = useState('all');
 
-  const complianceData = [
-    { month: 'Jun', rate: 90 },
-    { month: 'Jul', rate: 92 },
-    { month: 'Aug', rate: 93 },
-    { month: 'Sep', rate: 94 },
-    { month: 'Oct', rate: 96 },
-    { month: 'Nov', rate: 98 }
-  ];
-
-  const emissionsData = [
-    { month: 'Jun', emissions: 370000 },
-    { month: 'Jul', emissions: 360000 },
-    { month: 'Aug', emissions: 350000 },
-    { month: 'Sep', emissions: 390000 },
-    { month: 'Oct', emissions: 370000 },
-    { month: 'Nov', emissions: 380000 }
-  ];
-
-  // Company data
-  const companiesData = [
-    { 
-      name: 'Tiger Industries', 
-      compliance: 94, 
-      emissions: '360,333', 
-      status: 'compliant', 
-      documents: 3, 
-      lastSubmission: '2024-10-15',
-      lastReport: '2 days ago'
-    },
-    { 
-      name: 'Coastal Petrochemical', 
-      compliance: 91, 
-      emissions: '420,500', 
-      status: 'compliant', 
-      documents: 2, 
-      lastSubmission: '2024-10-12',
-      lastReport: '1 week ago'
-    },
-    { 
-      name: 'Delta Refining Co.', 
-      compliance: 88, 
-      emissions: '385,200', 
-      status: 'attention', 
-      documents: 1, 
-      lastSubmission: '2024-09-28',
-      lastReport: 'Overdue'
-    },
-    { 
-      name: 'Louisiana Carbon Solutions', 
-      compliance: 96, 
-      emissions: '310,800', 
-      status: 'compliant', 
-      documents: 4, 
-      lastSubmission: '2024-10-18',
-      lastReport: '1 day ago'
-    },
-    { 
-      name: 'Gulf Coast Manufacturing', 
-      compliance: 93, 
-      emissions: '395,100', 
-      status: 'compliant', 
-      documents: 2, 
-      lastSubmission: '2024-10-16',
-      lastReport: '3 days ago'
-    },
-    { 
-      name: 'Sasol Chemicals', 
-      compliance: 89, 
-      emissions: '360,333', 
-      status: 'attention', 
-      documents: 5, 
-      lastSubmission: '2024-10-20',
-      lastReport: '1 day ago'
-    }
-  ];
-
-  // Submissions data
-  const submissionsData = [
-    { 
-      company: 'Tiger Industries', 
-      document: 'Q3_Emissions_Report.pdf', 
-      type: 'Quarterly Report', 
-      submitted: '2024-10-15', 
-      status: 'approved',
-      reviewer: 'Serene Qasem'
-    },
-    { 
-      company: 'Louisiana Carbon Solutions', 
-      document: 'Plant_Efficiency_Analysis.xlsx', 
-      type: 'Efficiency Report', 
-      submitted: '2024-10-18', 
-      status: 'under_review',
-      reviewer: 'Pending'
-    },
-    { 
-      company: 'Gulf Coast Manufacturing', 
-      document: 'Safety_Protocol_Update.pdf', 
-      type: 'Safety Documentation', 
-      submitted: '2024-10-16', 
-      status: 'under_review',
-      reviewer: 'Chloe Gray'
-    },
-    { 
-      company: 'Coastal Petrochemical', 
-      document: 'Emissions_Monitoring_Data.csv', 
-      type: 'Monitoring Data', 
-      submitted: '2024-10-12', 
-      status: 'approved',
-      reviewer: 'Ibrahim Alam'
-    },
-    { 
-      company: 'Delta Refining Co.', 
-      document: 'Q3_Compliance_Report.pdf', 
-      type: 'Quarterly Report', 
-      submitted: '2024-09-28', 
-      status: 'overdue',
-      reviewer: 'Required'
-    },
-    { 
-      company: 'Sasol Chemicals (Louisiana)', 
-      document: 'Facility_Emissions_Analysis.pdf', 
-      type: 'Quarterly Report', 
-      submitted: '2024-10-20', 
-      status: 'under_review',
-      reviewer: 'Jackson Descant'
-    }
-  ];
-
-  // Alerts data
-  const alertsData = [
-    {
-      id: 1,
-      type: 'High Emissions',
-      company: 'Delta Refining Co.',
-      severity: 'high',
-      description: 'CO2 emissions exceeded daily limit by 15%',
-      timestamp: '2024-10-20 14:30',
-      status: 'active'
-    },
-    {
-      id: 2,
-      type: 'Missing Report',
-      company: 'Gulf Coast Manufacturing',
-      severity: 'medium',
-      description: 'Monthly compliance report overdue by 3 days',
-      timestamp: '2024-10-19 09:15',
-      status: 'pending'
-    },
-    {
-      id: 3,
-      type: 'Equipment Failure',
-      company: 'Coastal Petrochemical',
-      severity: 'high',
-      description: 'Primary scrubber system offline - immediate attention required',
-      timestamp: '2024-10-18 16:45',
-      status: 'active'
-    },
-    {
-      id: 4,
-      type: 'Compliance Review',
-      company: 'Tiger Industries',
-      severity: 'low',
-      description: 'Scheduled quarterly review due next week',
-      timestamp: '2024-10-17 11:20',
-      status: 'scheduled'
-    },
-    {
-      id: 5,
-      type: 'Permit Renewal',
-      company: 'Louisiana Carbon Solutions',
-      severity: 'medium',
-      description: 'Operating permit expires in 30 days',
-      timestamp: '2024-10-16 08:30',
-      status: 'pending'
-    }
-  ];
-
   // Filter functions
-  const filteredCompanies = companiesData.filter(company => {
+  const filteredCompanies = (companies || []).filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
-      company.status.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
-      company.emissions.includes(companySearchTerm);
+      company.status?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+      company.emissions?.toString().includes(companySearchTerm);
     const matchesStatus = companyStatusFilter === 'all' || company.status === companyStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const filteredSubmissions = submissionsData.filter(submission => {
+  const filteredSubmissions = (submissions || []).filter(submission => {
     const matchesSearch = submission.company.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
       submission.document.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
       submission.type.toLowerCase().includes(submissionSearchTerm.toLowerCase()) ||
@@ -227,7 +55,7 @@ function RegulatorDashboard() {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredAlerts = alertsData.filter(alert => {
+  const filteredAlerts = (alerts || []).filter(alert => {
     const matchesSearch = alert.company.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
       alert.type.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
       alert.description.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
@@ -238,54 +66,69 @@ function RegulatorDashboard() {
   });
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 800);
-  }, []);
+    if (!dataLoading) {
+      const timeout = setTimeout(() => setLoading(false), 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [dataLoading]);
+
+  const totalCompanies = companies?.length ?? 0;
+  const totalEmissions = useMemo(() => {
+    if (!companies?.length) return '0';
+    return companies
+      .map(company => Number(String(company.emissions).replace(/,/g, '')))
+      .filter(value => !Number.isNaN(value))
+      .reduce((sum, value) => sum + value, 0)
+      .toLocaleString();
+  }, [companies]);
+
+  const averageCompliance = useMemo(() => {
+    if (!companies?.length) return 0;
+    const total = companies.reduce((sum, company) => sum + Number(company.compliance ?? 0), 0);
+    return Math.round(total / companies.length);
+  }, [companies]);
+
+  const activeAlertsCount = alerts?.filter(alert => alert.status === 'active' || alert.status === 'pending').length ?? 0;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   // Enhanced interactive handlers
   const handleCompanyClick = (company) => {
-    let facilities = [];
-    
-    // Set specific facilities for Sasol Chemicals based on the dashboard data
-    if (company.name === 'Sasol Chemicals (Louisiana)' || company.name === 'Sasol Chemicals') {
-      facilities = [
-        { name: 'Lake Charles Complex', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '180,500', status: 'Optimal' },
-        { name: 'Westlake Facility', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '145,200', status: 'Optimal' },
-        { name: 'Sulfur Operations', location: 'Westlake, LA 70669 • Calcasieu Parish', emissions: '34,633', status: 'Needs Attention' }
-      ];
-    } else {
-      facilities = [
-        { name: 'Main Plant', location: 'Baton Rouge, LA', emissions: Math.round(company.emissions * 0.6), status: 'Active' },
-        { name: 'Processing Unit B', location: 'New Orleans, LA', emissions: Math.round(company.emissions * 0.4), status: 'Active' }
-      ];
-    }
-    
     setSelectedCompany({
       ...company,
-      facilities: facilities,
-      recentDocuments: [
-        { name: 'Monthly Emissions Report', date: '2024-10-15', status: 'Approved' },
-        { name: 'Compliance Certificate', date: '2024-09-30', status: 'Under Review' },
-        { name: 'Environmental Impact Study', date: '2024-09-15', status: 'Approved' }
-      ],
-      violations: company.status === 'attention' ? [
-        { date: '2024-09-28', type: 'Late Report Submission', severity: 'Minor', resolved: false },
-        { date: '2024-08-15', type: 'Emissions Threshold Exceeded', severity: 'Major', resolved: true }
-      ] : []
+      facilities: [],
+      recentDocuments: submissions
+        ?.filter(doc => doc.company === company.name)
+        .slice(0, 5)
+        .map(doc => ({
+          name: doc.document,
+          date: doc.submitted,
+          status: doc.status === 'approved' ? 'Approved' : doc.status === 'under_review' ? 'Under Review' : 'Pending',
+        })),
+      violations: alerts
+        ?.filter(alert => alert.company === company.name && (alert.status === 'active' || alert.status === 'pending'))
+        .map(alert => ({
+          date: alert.timestamp,
+          type: alert.type,
+          severity: alert.severity,
+          resolved: alert.status === 'resolved',
+        })),
     });
   };
 
   const handleDocumentReview = (submission) => {
+    const metadata = submission.metadata ?? {};
     setSelectedSubmission({
       ...submission,
       details: {
-        fileSize: '2.4 MB',
-        pages: 15,
-        submittedBy: 'Environmental Officer',
-        reviewDeadline: '2024-10-25',
-        complianceIssues: submission.status === 'under_review' ? [
-          'Missing signature on page 12',
-          'Incomplete emissions data for facility B'
-        ] : []
+        fileSize: metadata.file_size ?? metadata.fileSize ?? 'N/A',
+        pages: metadata.page_count ?? metadata.pages ?? null,
+        submittedBy: metadata.submitted_by ?? metadata.submittedBy ?? 'Unknown submitter',
+        reviewDeadline: metadata.review_deadline ?? metadata.reviewDeadline ?? submission.submitted,
+        complianceIssues: metadata.issues ?? metadata.complianceIssues ?? [],
       }
     });
   };
@@ -385,6 +228,17 @@ function RegulatorDashboard() {
     );
   }
 
+  if (dataError) {
+    return (
+      <div className="loading">
+        <p className="error">Unable to load regulator data: {dataError.message}</p>
+        <button className="sign-out-btn" onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="regulator-dashboard">
       <header className="dashboard-header">
@@ -395,7 +249,7 @@ function RegulatorDashboard() {
             <p>Louisiana Department of Environmental Quality</p>
           </div>
         </div>
-        <button className="sign-out-btn" onClick={() => navigate('/')}>
+        <button className="sign-out-btn" onClick={handleSignOut}>
           Sign Out
         </button>
       </header>
@@ -409,8 +263,8 @@ function RegulatorDashboard() {
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </div>
-            <div className="metric-value">6</div>
-            <div className="metric-subtitle">15 facilities • Click to view</div>
+            <div className="metric-value">{totalCompanies}</div>
+            <div className="metric-subtitle">Click to view organisations</div>
           </div>
 
           <div className="metric-card">
@@ -420,7 +274,7 @@ function RegulatorDashboard() {
                 <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </div>
-            <div className="metric-value">126.5M</div>
+            <div className="metric-value">{totalEmissions}</div>
             <div className="metric-subtitle">Tons CO₂ annually</div>
           </div>
 
@@ -432,7 +286,7 @@ function RegulatorDashboard() {
                 <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </div>
-            <div className="metric-value">92%</div>
+            <div className="metric-value">{averageCompliance}%</div>
             <div className="metric-change positive">↑ 2% improvement</div>
           </div>
 
@@ -445,8 +299,8 @@ function RegulatorDashboard() {
                 <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </div>
-            <div className="metric-value">3</div>
-            <div className="metric-alert">2 need attention • Click to review</div>
+            <div className="metric-value">{activeAlertsCount}</div>
+            <div className="metric-alert">Click to review</div>
           </div>
         </div>
 
@@ -485,14 +339,8 @@ function RegulatorDashboard() {
               <h3>Companies</h3>
               <div className="company-items">
                 {[
-                  { name: 'Tiger Industries', compliance: 94, emissions: '360,333', status: 'compliant' },
-                  { name: 'Coastal Petrochemical', compliance: 91, emissions: '420,500', status: 'compliant' },
-                  { name: 'Delta Refining Co.', compliance: 88, emissions: '385,200', status: 'attention' },
-                  { name: 'Louisiana Carbon Solutions', compliance: 96, emissions: '310,800', status: 'compliant' },
-                  { name: 'Gulf Coast Manufacturing', compliance: 93, emissions: '395,100', status: 'compliant' },
-                  { name: 'Sasol Chemicals (Louisiana)', compliance: 89, emissions: '360,333', status: 'attention' }
-                ]
-                .map((company, index) => (
+                  ...(companies || [])
+                ].map((company, index) => (
                   <div key={index} className="company-item clickable-item" onClick={() => handleCompanyClick(company)}>
                     <div className="company-info">
                       <h4>{company.name}</h4>
@@ -521,7 +369,7 @@ function RegulatorDashboard() {
               <div className="chart-card">
                 <h3>Statewide Compliance Trend</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={complianceData}>
+                  <LineChart data={complianceTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
                     <XAxis dataKey="month" stroke="#8892b0" />
                     <YAxis stroke="#8892b0" domain={[75, 100]} />
@@ -549,7 +397,7 @@ function RegulatorDashboard() {
               <div className="chart-card">
                 <h3>Total Emissions Trend (Tons/day)</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={emissionsData}>
+                  <BarChart data={emissionsTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a3351" />
                     <XAxis dataKey="month" stroke="#8892b0" />
                     <YAxis stroke="#8892b0" />
@@ -611,7 +459,7 @@ function RegulatorDashboard() {
             )}
             <div className="companies-grid">
               {filteredCompanies.map((company, index) => (
-                <div key={index} className="company-detail-card">
+                <div key={company.id ?? index} className="company-detail-card">
                   <div className="company-header">
                     <h4>{company.name}</h4>
                     <span className={`status-badge ${company.status}`}>
@@ -698,7 +546,7 @@ function RegulatorDashboard() {
             )}
             <div className="submissions-list">
               {filteredSubmissions.map((submission, index) => (
-                <div key={index} className={`submission-item ${submission.status}`}>
+                <div key={`${submission.company}-${submission.document}-${index}`} className={`submission-item ${submission.status}`}>
                   <div className="submission-info">
                     <h4>{submission.company}</h4>
                     <p><strong>{submission.document}</strong> • {submission.type}</p>
@@ -772,8 +620,8 @@ function RegulatorDashboard() {
               </div>
             )}
             <div className="alert-items">
-              {filteredAlerts.map((alert, index) => (
-                <div key={index} className={`alert-item ${alert.severity}`}>
+              {filteredAlerts.map((alert) => (
+                <div key={alert.id} className={`alert-item ${alert.severity}`}>
                   <div className={`alert-icon ${alert.severity}`}>
                     {alert.severity === 'high' && '⚠️'}
                     {alert.severity === 'medium' && '🔔'}

@@ -1,156 +1,134 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ClimateTraceData.css';
+import { supabase } from '../lib/supabaseClient';
+
+const defaultBenchmark = {
+  sector: 'oil-and-gas',
+  year: new Date().getFullYear(),
+  comparison: {
+    rank: 15,
+    percentile: 75,
+    industry_average: 180000,
+    company_emissions: 50000,
+    total_companies: 25,
+  },
+  top_sources: [],
+};
+
+const defaultRegional = {
+  regional_context: {
+    total_sources: 3,
+    total_emissions: 360333,
+    average_emissions: 120111,
+  },
+  louisiana_sources: [],
+};
+
+const defaultSector = {
+  total_emissions: 360333,
+  sector_breakdown: [
+    { sector: 'chemical manufacturing', emissions: 180500, percentage: 50 },
+    { sector: 'petrochemicals', emissions: 145200, percentage: 40.3 },
+    { sector: 'sulfur processing', emissions: 34633, percentage: 9.7 },
+  ],
+};
 
 const ClimateTraceData = ({ user }) => {
-  const [benchmarkData, setBenchmarkData] = useState(null);
-  const [regionalData, setRegionalData] = useState(null);
-  const [sectorData, setSectorData] = useState(null);
+  const [benchmarkData, setBenchmarkData] = useState(defaultBenchmark);
+  const [regionalData, setRegionalData] = useState(defaultRegional);
+  const [sectorData, setSectorData] = useState(defaultSector);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('benchmarks');
 
   useEffect(() => {
     fetchClimateTraceData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.orgId]);
 
   const fetchClimateTraceData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('accessToken');
-      
-      // For demo purposes, let's use the public endpoint that doesn't require authentication
-      // In production, you'd want proper authentication
-      const backendUrl = 'http://localhost:8000';
-      console.log(`Using backend: ${backendUrl}`);
-      
-      // Test server connection
-      try {
-        const testResponse = await fetch(`${backendUrl}/api/climate-trace/public-data/?limit=1`);
-        if (!testResponse.ok && testResponse.status !== 401) {
-          throw new Error('Server not responding');
-        }
-      } catch (e) {
-        throw new Error('Django backend server is not running. Please start the server with: python manage.py runserver');
-      }
-      
-      // For now, let's use the public endpoint to get sample data
-      // and simulate the other endpoints with mock data based on real Climate Trace structure
-      const publicResponse = await fetch(`${backendUrl}/api/climate-trace/public-data/?limit=20`);
-      
-      if (publicResponse.ok) {
-        const publicData = await publicResponse.json();
-        console.log('✅ Public data loaded:', publicData);
-        
-        // Use the real data to create mock structures for the other tabs
-        const realSources = publicData.top_sources || [];
-        
-        // Create benchmark data from real sources
-        const benchmarkData = {
-          sector: 'oil-and-gas',
-          year: publicData.year || 2024,
-          comparison: {
-            rank: 15,
-            percentile: 75.0,
-            industry_average: realSources.length > 0 ? realSources[0].emissionsQuantity / 2 : 100000,
-            company_emissions: 50000,
-            total_companies: 25
-          },
-          top_sources: realSources.slice(0, 10)
-        };
-        setBenchmarkData(benchmarkData);
-        
-        // Create Louisiana regional data from real sources
-        const louisianaSources = realSources.filter(source => 
-          source.name && (
-            source.name.toLowerCase().includes('gulf') ||
-            source.name.toLowerCase().includes('louisiana') ||
-            source.name.toLowerCase().includes('la')
-          )
-        );
-        
-        const regionalData = {
-          regional_context: {
-            total_sources: louisianaSources.length,
-            total_emissions: louisianaSources.reduce((sum, s) => sum + (s.emissionsQuantity || 0), 0),
-            average_emissions: louisianaSources.length > 0 ? 
-              louisianaSources.reduce((sum, s) => sum + (s.emissionsQuantity || 0), 0) / louisianaSources.length : 0
-          },
-          louisiana_sources: louisianaSources.slice(0, 10)
-        };
-        setRegionalData(regionalData);
-        
-        // Create sector analysis from real sources
-        const sectors = ['oil-and-gas', 'power', 'manufacturing', 'chemicals'];
-        const sectorData = {
-          sectors: sectors,
-          year: publicData.year || 2024,
-          sector_statistics: {}
-        };
-        
-        // Group real sources by sector (simplified)
-        sectors.forEach(sector => {
-          const sectorSources = realSources.filter(s => 
-            s.sector === 'fossil-fuel-operations' || s.sector === sector
-          ).slice(0, 5);
-          
-          const totalEmissions = sectorSources.reduce((sum, s) => sum + (s.emissionsQuantity || 0), 0);
-          
-          sectorData.sector_statistics[sector] = {
-            total_sources: sectorSources.length,
-            total_emissions: totalEmissions,
-            average_emissions: sectorSources.length > 0 ? totalEmissions / sectorSources.length : 0,
-            max_emissions: sectorSources.length > 0 ? Math.max(...sectorSources.map(s => s.emissionsQuantity || 0)) : 0,
-            top_emitter: sectorSources[0] || null
-          };
-        });
-        
-        setSectorData(sectorData);
-        
-        console.log('✅ All Climate Trace data processed from real sources');
-      } else {
-        throw new Error(`Failed to fetch public data: ${publicResponse.status}`);
+
+      const orgId = user?.orgId ?? null;
+
+      const { data: scorecard, error: scorecardError } = await supabase
+        .from('public_scorecards')
+        .select('org_id, summary, published_at')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (scorecardError) {
+        throw scorecardError;
       }
 
+      const summary = scorecard?.summary ?? {};
+
+      setBenchmarkData({
+        sector: summary.focus_sector ?? defaultBenchmark.sector,
+        year: summary.year ?? defaultBenchmark.year,
+        comparison: {
+          rank: summary.rank ?? defaultBenchmark.comparison.rank,
+          percentile: summary.percentile ?? defaultBenchmark.comparison.percentile,
+          industry_average: summary.industry_average ?? defaultBenchmark.comparison.industry_average,
+          company_emissions: summary.daily_emissions_avg ?? defaultBenchmark.comparison.company_emissions,
+          total_companies: summary.total_companies ?? defaultBenchmark.comparison.total_companies,
+        },
+        top_sources: summary.top_sources ?? defaultBenchmark.top_sources,
+      });
+
+      setRegionalData({
+        regional_context: {
+          total_sources: summary.total_sources ?? defaultRegional.regional_context.total_sources,
+          total_emissions: summary.total_emissions ?? defaultRegional.regional_context.total_emissions,
+          average_emissions:
+            summary.average_emissions ??
+            summary.daily_emissions_avg ??
+            defaultRegional.regional_context.average_emissions,
+        },
+        louisiana_sources: summary.louisiana_sources ?? defaultRegional.louisiana_sources,
+      });
+
+      setSectorData({
+        total_emissions: summary.total_emissions ?? defaultSector.total_emissions,
+        sector_breakdown: summary.sector_breakdown ?? defaultSector.sector_breakdown,
+      });
     } catch (err) {
-      const errorMessage = err.message.includes('Django backend') 
-        ? err.message 
-        : 'Failed to fetch Climate Trace data. Check browser console for details.';
-      setError(errorMessage);
-      console.error('🔥 Climate Trace API error:', err);
+      console.error('Failed to load Climate TRACE data', err);
+      setError(err.message ?? 'Unable to load Climate TRACE insights from Supabase.');
+      setBenchmarkData(defaultBenchmark);
+      setRegionalData(defaultRegional);
+      setSectorData(defaultSector);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatEmissions = (value) => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M tons CO2e`;
-    } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K tons CO2e`;
-    }
-    return `${value.toFixed(1)} tons CO2e`;
+  const formatEmissions = (value = 0) => {
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M tons CO₂e`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tons CO₂e`;
+    return `${Number(value).toFixed(1)} tons CO₂e`;
   };
 
   const renderBenchmarks = () => {
-    if (!benchmarkData) return null;
-
-    const { comparison, top_sources } = benchmarkData;
-
+    const { comparison, top_sources } = benchmarkData ?? {};
     return (
       <div className="climate-trace-section">
         <h3>Louisiana Industry Benchmarks</h3>
         <div className="louisiana-focus-note">
-          <p>📊 Comparing your performance against Louisiana and Gulf Coast industrial facilities</p>
+          <p>📊 Comparing your performance against Louisiana and Gulf Coast industrial facilities.</p>
         </div>
-        
+
         {comparison && (
           <div className="benchmark-comparison">
             <div className="comparison-card">
               <h4>Your Position in Industry</h4>
               <div className="position-indicator">
                 <span className="position-rank">
-                  Rank: {comparison.rank || 'N/A'} / {comparison.total_companies || 'N/A'}
+                  Rank: {comparison.rank ?? '–'} / {comparison.total_companies ?? '–'}
                 </span>
                 <div className="percentile">
                   {comparison.percentile ? `${comparison.percentile}th percentile` : 'Data pending'}
@@ -159,11 +137,11 @@ const ClimateTraceData = ({ user }) => {
               <div className="industry-stats">
                 <div className="stat">
                   <label>Industry Average:</label>
-                  <span>{formatEmissions(comparison.industry_average || 0)}</span>
+                  <span>{formatEmissions(comparison.industry_average)}</span>
                 </div>
                 <div className="stat">
                   <label>Your Emissions:</label>
-                  <span>{formatEmissions(comparison.company_emissions || 0)}</span>
+                  <span>{formatEmissions(comparison.company_emissions)}</span>
                 </div>
               </div>
             </div>
@@ -173,16 +151,14 @@ const ClimateTraceData = ({ user }) => {
         <div className="top-sources">
           <h4>Top Emitters in Your Sector</h4>
           <div className="sources-list">
-            {top_sources?.slice(0, 5).map((source, index) => (
-              <div key={source.id || index} className="source-item">
+            {(top_sources ?? []).slice(0, 5).map((source, index) => (
+              <div key={source?.id ?? index} className="source-item">
                 <div className="source-rank">#{index + 1}</div>
                 <div className="source-info">
-                  <div className="source-name">{source.sourceName || 'Unknown'}</div>
-                  <div className="source-location">{source.country} - {source.state}</div>
+                  <div className="source-name">{source?.name ?? source?.sourceName ?? 'Unknown'}</div>
+                  <div className="source-location">{source?.location ?? 'Louisiana, USA'}</div>
                 </div>
-                <div className="source-emissions">
-                  {formatEmissions(source.emissionsQuantity || 0)}
-                </div>
+                <div className="source-emissions">{formatEmissions(source?.emissionsQuantity)}</div>
               </div>
             ))}
           </div>
@@ -192,31 +168,28 @@ const ClimateTraceData = ({ user }) => {
   };
 
   const renderRegional = () => {
-    if (!regionalData) return null;
-
-    const { regional_context, louisiana_sources } = regionalData;
-
+    const { regional_context, louisiana_sources } = regionalData ?? {};
     return (
       <div className="climate-trace-section">
         <h3>Louisiana Regional Context</h3>
         <div className="louisiana-focus-note">
-          <p>📍 <strong>Louisiana-focused data:</strong> Emissions sources from Louisiana and Gulf Coast region</p>
+          <p>📍 Emissions sources from Louisiana and the Gulf Coast region.</p>
         </div>
-        
+
         {regional_context && (
           <div className="regional-overview">
             <div className="regional-stats">
               <div className="stat-card">
                 <h4>Total Louisiana Sources</h4>
-                <span className="stat-value">{regional_context.total_sources || 0}</span>
+                <span className="stat-value">{regional_context.total_sources ?? 0}</span>
               </div>
               <div className="stat-card">
                 <h4>Total Emissions</h4>
-                <span className="stat-value">{formatEmissions(regional_context.total_emissions || 0)}</span>
+                <span className="stat-value">{formatEmissions(regional_context.total_emissions)}</span>
               </div>
               <div className="stat-card">
                 <h4>Average per Source</h4>
-                <span className="stat-value">{formatEmissions(regional_context.average_emissions || 0)}</span>
+                <span className="stat-value">{formatEmissions(regional_context.average_emissions)}</span>
               </div>
             </div>
           </div>
@@ -225,20 +198,20 @@ const ClimateTraceData = ({ user }) => {
         <div className="louisiana-sources">
           <h4>Major Louisiana Emission Sources</h4>
           <div className="sources-grid">
-            {louisiana_sources?.slice(0, 6).map((source, index) => (
-              <div key={source.id || index} className="source-card">
+            {(louisiana_sources ?? []).slice(0, 6).map((source, index) => (
+              <div key={source?.id ?? index} className="source-card">
                 <div className="source-header">
-                  <h5>{source.sourceName || 'Unknown Source'}</h5>
-                  <span className="source-sector">{source.sector}</span>
+                  <h5>{source?.name ?? source?.sourceName ?? 'Unknown Source'}</h5>
+                  <span className="source-sector">{source?.sector ?? 'industrial'}</span>
                 </div>
                 <div className="source-details">
                   <div className="detail">
                     <label>Emissions:</label>
-                    <span>{formatEmissions(source.emissionsQuantity || 0)}</span>
+                    <span>{formatEmissions(source?.emissionsQuantity)}</span>
                   </div>
                   <div className="detail">
                     <label>Location:</label>
-                    <span>{source.city}, LA</span>
+                    <span>{source?.location ?? 'Louisiana, USA'}</span>
                   </div>
                 </div>
               </div>
@@ -250,46 +223,30 @@ const ClimateTraceData = ({ user }) => {
   };
 
   const renderSectors = () => {
-    if (!sectorData) return null;
-
-    const { sector_statistics } = sectorData;
-
+    const breakdown = sectorData?.sector_breakdown ?? [];
+    const total = breakdown.reduce((sum, item) => sum + (item.emissions ?? 0), 0);
     return (
       <div className="climate-trace-section">
         <h3>Sector Analysis</h3>
-        
         <div className="sectors-overview">
-          {Object.entries(sector_statistics).map(([sector, stats]) => (
-            <div key={sector} className="sector-card">
+          {breakdown.map((item, index) => (
+            <div key={item.sector ?? index} className="sector-card">
               <div className="sector-header">
-                <h4>{sector.replace('-', ' ').toUpperCase()}</h4>
-                <span className="source-count">{stats.total_sources} sources</span>
+                <h4>{(item.sector ?? 'Unknown Sector').toUpperCase()}</h4>
+                <span className="source-count">
+                  {(item.percentage ?? (total ? (item.emissions / total) * 100 : 0)).toFixed(1)}% of total
+                </span>
               </div>
-              
               <div className="sector-stats">
                 <div className="stat-row">
-                  <label>Total Emissions:</label>
-                  <span>{formatEmissions(stats.total_emissions)}</span>
+                  <label>Estimated Emissions:</label>
+                  <span>{formatEmissions(item.emissions)}</span>
                 </div>
                 <div className="stat-row">
-                  <label>Average per Source:</label>
-                  <span>{formatEmissions(stats.average_emissions)}</span>
-                </div>
-                <div className="stat-row">
-                  <label>Largest Emitter:</label>
-                  <span>{formatEmissions(stats.max_emissions)}</span>
+                  <label>Relative Impact:</label>
+                  <span>{item.percentage?.toFixed?.(1) ?? 0}%</span>
                 </div>
               </div>
-
-              {stats.top_emitter && (
-                <div className="top-emitter">
-                  <h5>Top Emitter:</h5>
-                  <div className="emitter-info">
-                    <span className="emitter-name">{stats.top_emitter.sourceName}</span>
-                    <span className="emitter-location">{stats.top_emitter.country}</span>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -301,7 +258,7 @@ const ClimateTraceData = ({ user }) => {
     return (
       <div className="climate-trace-loading">
         <div className="loading-spinner"></div>
-        <p>Loading real-world emissions data...</p>
+        <p>Loading real-world emissions data…</p>
       </div>
     );
   }
@@ -309,20 +266,9 @@ const ClimateTraceData = ({ user }) => {
   if (error) {
     return (
       <div className="climate-trace-error">
-        <h3>⚠️ Climate Trace Data Unavailable</h3>
+        <h3>⚠️ Climate TRACE data unavailable</h3>
         <p>{error}</p>
-        {error.includes('Django backend') && (
-          <div className="server-instructions">
-            <p><strong>To fix this:</strong></p>
-            <ol>
-              <li>Open a terminal</li>
-              <li>Navigate to: <code>carbonsight-project/backend</code></li>
-              <li>Run: <code>source venv/bin/activate</code></li>
-              <li>Run: <code>python manage.py runserver</code></li>
-            </ol>
-          </div>
-        )}
-        <button onClick={fetchClimateTraceData}>Retry Connection</button>
+        <button onClick={fetchClimateTraceData}>Retry</button>
       </div>
     );
   }
@@ -331,26 +277,17 @@ const ClimateTraceData = ({ user }) => {
     <div className="climate-trace-container">
       <div className="climate-trace-header">
         <h2>Louisiana Emissions Intelligence</h2>
-        <p>Powered by Climate TRACE - Real-world Louisiana & Gulf Coast emissions data</p>
+        <p>Supabase-powered snapshot derived from Climate TRACE insights.</p>
       </div>
 
       <div className="climate-trace-tabs">
-        <button 
-          className={activeTab === 'benchmarks' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('benchmarks')}
-        >
+        <button className={activeTab === 'benchmarks' ? 'tab active' : 'tab'} onClick={() => setActiveTab('benchmarks')}>
           Industry Benchmarks
         </button>
-        <button 
-          className={activeTab === 'regional' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('regional')}
-        >
+        <button className={activeTab === 'regional' ? 'tab active' : 'tab'} onClick={() => setActiveTab('regional')}>
           Regional Context
         </button>
-        <button 
-          className={activeTab === 'sectors' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('sectors')}
-        >
+        <button className={activeTab === 'sectors' ? 'tab active' : 'tab'} onClick={() => setActiveTab('sectors')}>
           Sector Analysis
         </button>
       </div>
@@ -363,9 +300,8 @@ const ClimateTraceData = ({ user }) => {
 
       <div className="climate-trace-footer">
         <p>
-          <strong>Data Source:</strong> Climate TRACE - Comprehensive global emissions tracking
-          <br />
-          <small>Last updated: {new Date().toLocaleDateString()}</small>
+          <strong>Data Source:</strong> Supabase `public_scorecards` (climate trace-derived)<br />
+          <small>Last refreshed: {new Date().toLocaleDateString()}</small>
         </p>
       </div>
     </div>

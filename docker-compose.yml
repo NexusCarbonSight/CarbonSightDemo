@@ -1,42 +1,16 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:14
-    environment:
-      POSTGRES_DB: carbonsight
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  backend:
-    build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/carbonsight
-      - DEBUG=True
-      - ALLOWED_HOSTS=localhost,127.0.0.1
-    depends_on:
-      - db
-
   frontend:
-    build: ./frontend
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm start"
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:8000/api
+      REACT_APP_SUPABASE_URL: ${REACT_APP_SUPABASE_URL}
+      REACT_APP_SUPABASE_ANON_KEY: ${REACT_APP_SUPABASE_ANON_KEY}
+      REACT_APP_DEFAULT_ORG_SLUG: ${REACT_APP_DEFAULT_ORG_SLUG:-sasol-chemicals-la}
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    depends_on:
-      - backend
-
-volumes:
-  postgres_data:

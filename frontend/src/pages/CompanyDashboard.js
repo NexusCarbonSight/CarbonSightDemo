@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CompanyDashboard.css';
 import ClimateTraceData from '../components/ClimateTraceData';
+import { useAuth } from '../context/AuthContext';
+import { useCompanyDashboardData } from '../hooks/useCompanyDashboardData';
 
 function CompanyDashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { profile, signOut } = useAuth();
+  const { data: dashboardData, loading: dataLoading, error: dataError } = useCompanyDashboardData(profile);
+  const [pageLoading, setPageLoading] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [aiInsights, setAiInsights] = useState({});
   const [aiLoading, setAiLoading] = useState(false);
@@ -23,311 +27,11 @@ function CompanyDashboard() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
 
-  // Louisiana-specific hardcoded data for Sasol Chemicals
-  const dashboardData = {
-    company: 'Sasol Chemicals (Louisiana)',
-    location: 'Lake Charles, Louisiana',
-    industry: 'Chemical Manufacturing / Petrochemicals',
-    emissionsRate: 360333,
-    emissionsChange: 12,
-    areasAffected: 3,
-    optimalFacilities: 2,
-    attentionFacilities: 1,
-    complianceStatus: 94,
-    complianceDeadline: 'Jan 15',
-    activeTasks: 7,
-    urgentTasks: 2,
-    normalTasks: 5,
-
-    // Louisiana Facilities Data
-    facilities: [
-      {
-        id: 1,
-        name: 'Lake Charles Complex',
-        location: 'Westlake, LA 70669',
-        address: '1 Sasol Place, Westlake, LA 70669',
-        parish: 'Calcasieu',
-        lat: 30.2488,
-        lng: -93.2652,
-        emissionsPerDay: 180500,
-        emissionsChange: -8,
-        status: 'optimal',
-        employees: 1200,
-        operationalSince: 2014,
-        primaryProducts: ['Ethylene', 'Propylene', 'Mixed Alcohols'],
-        capacity: '1.5M tons/year',
-        nearbyZipCodes: ['70669', '70611', '70605'],
-        environmentalImpact: 'Moderate - Active monitoring of nearby communities',
-        airQualityIndex: 45
-      },
-      {
-        id: 2,
-        name: 'Westlake Facility',
-        location: 'Westlake, LA 70669',
-        address: '3350 Highway 108, Westlake, LA 70669',
-        parish: 'Calcasieu',
-        lat: 30.2350,
-        lng: -93.2700,
-        emissionsPerDay: 145200,
-        emissionsChange: -15,
-        status: 'optimal',
-        employees: 850,
-        operationalSince: 2016,
-        primaryProducts: ['Linear Alpha Olefins', 'Detergent Alcohols'],
-        capacity: '1.2M tons/year',
-        nearbyZipCodes: ['70669', '70615'],
-        environmentalImpact: 'Low - Best-in-class emissions control',
-        airQualityIndex: 38
-      },
-      {
-        id: 3,
-        name: 'Sulfur Operations',
-        location: 'Westlake, LA 70669',
-        address: '1 Sulfur Road, Westlake, LA 70669',
-        parish: 'Calcasieu',
-        lat: 30.2400,
-        lng: -93.2600,
-        emissionsPerDay: 34633,
-        emissionsChange: 5,
-        status: 'needs_attention',
-        employees: 320,
-        operationalSince: 2015,
-        primaryProducts: ['Sulfur', 'Sulfuric Acid'],
-        capacity: '500K tons/year',
-        nearbyZipCodes: ['70669'],
-        environmentalImpact: 'Elevated - Recent increase requires investigation',
-        airQualityIndex: 62
-      }
-    ],
-
-    // Louisiana Compliance Tasks
-    complianceTasks: [
-      {
-        id: 1,
-        title: 'Q4 2024 Air Emissions Report',
-        regulation: 'Louisiana DEQ - LAC 33:III.Chapter 5',
-        dueDate: 'Jan 15, 2025',
-        status: 'in_progress',
-        priority: 'urgent',
-        assignedTo: 'Environmental Compliance Team',
-        completionPercent: 75,
-        requirements: ['Emissions data compilation', 'Third-party verification', 'DEQ submission portal upload']
-      },
-      {
-        id: 2,
-        title: 'Title V Operating Permit Renewal',
-        regulation: 'EPA Clean Air Act Title V',
-        dueDate: 'Feb 1, 2025',
-        status: 'in_progress',
-        priority: 'urgent',
-        assignedTo: 'Regulatory Affairs',
-        completionPercent: 60,
-        requirements: ['Updated facility diagrams', 'Emissions modeling report', 'Public notice documentation']
-      },
-      {
-        id: 3,
-        title: 'Louisiana DEQ Annual Operating Fee',
-        regulation: 'LAC 33:III.502',
-        dueDate: 'Mar 31, 2025',
-        status: 'pending',
-        priority: 'normal',
-        assignedTo: 'Finance Department',
-        completionPercent: 0,
-        requirements: ['Fee calculation worksheet', 'Payment authorization', 'Proof of payment']
-      },
-      {
-        id: 4,
-        title: 'EPA Greenhouse Gas Reporting',
-        regulation: '40 CFR Part 98',
-        dueDate: 'Mar 31, 2025',
-        status: 'pending',
-        priority: 'normal',
-        assignedTo: 'Environmental Compliance Team',
-        completionPercent: 25,
-        requirements: ['GHG emissions calculation', 'e-GGRT system entry', 'XML file submission']
-      },
-      {
-        id: 5,
-        title: 'Sulfur Operations Stack Testing',
-        regulation: 'Louisiana DEQ Air Permit Condition 4.2',
-        dueDate: 'Apr 15, 2025',
-        status: 'scheduled',
-        priority: 'normal',
-        assignedTo: 'Sulfur Operations Manager',
-        completionPercent: 10,
-        requirements: ['Third-party testing contractor', 'Pre-test protocol', 'Stack test report']
-      },
-      {
-        id: 6,
-        title: 'Stormwater Pollution Prevention Plan Update',
-        regulation: 'Louisiana Pollutant Discharge Elimination System',
-        dueDate: 'May 1, 2025',
-        status: 'pending',
-        priority: 'normal',
-        assignedTo: 'EHS Team',
-        completionPercent: 0,
-        requirements: ['Site inspection', 'SWPPP revision', 'Training documentation']
-      }
-    ],
-
-    activities: [
-      { title: 'Lake Charles Complex emissions data uploaded to Louisiana DEQ portal', time: '2 hours ago', type: 'success' },
-      { title: 'Westlake Facility - Monthly monitoring report approved', time: '5 hours ago', type: 'success' },
-      { title: 'Title V permit renewal documentation submitted', time: '1 day ago', type: 'info' },
-      { title: 'Sulfur Operations - Elevated emissions alert triggered', time: '2 days ago', type: 'warning' },
-      { title: 'EPA Region 6 inspection scheduled for Lake Charles Complex', time: '3 days ago', type: 'info' }
-    ],
-
-    tasks: [
-      {
-        id: 1,
-        title: 'Submit Q4 2024 Emissions Report to Louisiana DEQ',
-        description: 'Quarterly air emissions report required under LAC 33:III.Chapter 5',
-        priority: 'urgent',
-        due: 'Jan 15, 2025',
-        status: 'pending',
-        category: 'compliance',
-        facility: 'All Facilities'
-      },
-      {
-        id: 2,
-        title: 'Sulfur Operations Emissions Investigation',
-        description: 'Investigate 5% increase in emissions at Sulfur Operations facility',
-        priority: 'urgent',
-        due: 'Nov 10, 2024',
-        status: 'pending',
-        category: 'maintenance',
-        facility: 'Sulfur Operations'
-      },
-      {
-        id: 3,
-        title: 'Review EPA Region 6 Guidance Update',
-        description: 'New EPA guidance for petrochemical facilities in Louisiana',
-        priority: 'normal',
-        due: 'Dec 1, 2024',
-        status: 'pending',
-        category: 'compliance',
-        facility: 'All Facilities'
-      },
-      {
-        id: 4,
-        title: 'Lake Charles Complex Efficiency Audit',
-        description: 'Implement recommendations from recent energy efficiency audit',
-        priority: 'normal',
-        due: 'Nov 30, 2024',
-        status: 'pending',
-        category: 'optimization',
-        facility: 'Lake Charles Complex'
-      },
-      {
-        id: 5,
-        title: 'Hurricane Season Emergency Response Training',
-        description: 'Annual Gulf Coast hurricane preparedness and emergency response training',
-        priority: 'normal',
-        due: 'Dec 15, 2024',
-        status: 'pending',
-        category: 'training',
-        facility: 'All Facilities'
-      },
-      {
-        id: 6,
-        title: 'Westlake Facility Sensor Calibration',
-        description: 'Quarterly calibration of CEMS (Continuous Emissions Monitoring System)',
-        priority: 'normal',
-        due: 'Dec 20, 2024',
-        status: 'pending',
-        category: 'maintenance',
-        facility: 'Westlake Facility'
-      },
-      {
-        id: 7,
-        title: 'Community Engagement Meeting - Calcasieu Parish',
-        description: 'Quarterly community meeting with local residents and parish officials',
-        priority: 'normal',
-        due: 'Jan 5, 2025',
-        status: 'pending',
-        category: 'community',
-        facility: 'All Facilities'
-      }
-    ],
-
-    recommendations: [
-      {
-        title: 'Optimize Transportation Fleet',
-        description: 'Transition to hybrid and electric vehicles for on-site transportation and material delivery. Analysis shows significant potential for emissions reduction through fleet modernization, including replacing diesel trucks with electric alternatives and implementing route optimization software.',
-        impact: 'high',
-        category: 'Transportation',
-        action: '1,200 tons CO₂/year',
-        facility: 'All Facilities',
-        detailedSteps: [
-          'Conduct comprehensive fleet audit to identify high-emission vehicles for replacement',
-          'Evaluate electric and hybrid vehicle options suitable for chemical facility operations',
-          'Install EV charging infrastructure at Lake Charles Complex and Westlake Facility',
-          'Implement route optimization software to reduce fuel consumption',
-          'Train drivers on eco-driving techniques and new vehicle technology',
-          'Establish partnership with local EV dealers for maintenance support'
-        ],
-        timeline: '6-12 months',
-        estimatedCost: '$150,000 - $300,000',
-        expectedBenefit: '40% reduction in fleet emissions',
-        complianceImpact: 'This initiative directly supports Louisiana\'s Clean Energy Initiative and positions Sasol Chemicals as a leader in sustainable operations. The fleet modernization will contribute to meeting EPA greenhouse gas reporting requirements under 40 CFR Part 98, potentially qualifying the company for state-level green energy incentives. Additionally, reduced emissions from transportation will help maintain compliance with Louisiana DEQ air quality standards in Calcasieu Parish, demonstrating corporate responsibility to local communities and regulators.',
-        environmentalBenefit: 'Fleet optimization will eliminate approximately 1,200 tons of CO₂ emissions annually, equivalent to removing 260 passenger vehicles from the road. Beyond carbon reduction, the transition to electric vehicles will significantly decrease nitrogen oxide (NOx) and particulate matter emissions in the Lake Charles area, improving local air quality for nearby communities in ZIP codes 70669, 70611, and 70605. This initiative also reduces noise pollution and demonstrates Sasol\'s commitment to environmental stewardship in the Gulf Coast region.'
-      },
-      {
-        title: 'Implement Energy Management System',
-        description: 'Deploy an advanced Energy Management System (EMS) with real-time monitoring and AI-powered optimization across all facilities. The system will identify energy waste, optimize equipment scheduling, and provide actionable insights for reducing electricity and natural gas consumption.',
-        impact: 'medium',
-        category: 'Energy Efficiency',
-        action: '800 tons CO₂/year',
-        facility: 'Lake Charles Complex',
-        detailedSteps: [
-          'Select and procure enterprise-grade Energy Management System platform',
-          'Install IoT sensors and smart meters across critical equipment and processes',
-          'Integrate EMS with existing SCADA and plant control systems',
-          'Configure AI algorithms for predictive energy optimization',
-          'Establish baseline energy consumption metrics for all operations',
-          'Train operations and maintenance staff on EMS dashboard and analytics',
-          'Implement automated alerts for energy anomalies and optimization opportunities'
-        ],
-        timeline: '8-10 months',
-        estimatedCost: '$200,000 - $400,000',
-        expectedBenefit: '12-15% reduction in energy costs',
-        complianceImpact: 'Implementation of an Energy Management System aligns with EPA Energy Star certification requirements and supports compliance with Louisiana Act 517 promoting industrial energy efficiency. The EMS will provide detailed documentation of energy consumption patterns, which is valuable for regulatory reporting under Louisiana DEQ\'s emissions inventory requirements. Real-time monitoring capabilities will enable faster response to potential permit exceedances, reducing the risk of violations and demonstrating proactive environmental management to state and federal regulators.',
-        environmentalBenefit: 'The Energy Management System will reduce annual CO₂ emissions by approximately 800 tons through optimized energy consumption and reduced waste. By identifying and eliminating inefficiencies in steam generation, compressed air systems, and process heating, the facility will significantly decrease its carbon footprint while lowering operational costs. The system\'s predictive capabilities will prevent energy spikes that contribute to grid stress during peak demand periods, supporting regional energy stability. This initiative showcases how technology-driven solutions can achieve both environmental and economic benefits in petrochemical operations.'
-      },
-      {
-        title: 'Renewable Energy Transition',
-        description: 'Develop on-site renewable energy generation through solar panel installation and explore partnership opportunities for wind energy procurement. This comprehensive approach includes rooftop and ground-mounted solar arrays, combined with renewable energy credits (RECs) to offset remaining fossil fuel consumption.',
-        impact: 'high',
-        category: 'Renewable Energy',
-        action: '2,100 tons CO₂/year',
-        facility: 'Westlake Facility',
-        detailedSteps: [
-          'Conduct solar feasibility study for available roof and land space at Westlake Facility',
-          'Engage renewable energy consultants to design optimal solar array configuration',
-          'Secure permits and approvals from Louisiana Public Service Commission',
-          'Install 2MW solar photovoltaic system on warehouse rooftops and available land',
-          'Establish power purchase agreement (PPA) with regional wind energy provider',
-          'Integrate renewable energy sources with existing electrical infrastructure',
-          'Implement battery storage system for energy resilience during grid disruptions',
-          'Monitor and report renewable energy generation through dedicated dashboard'
-        ],
-        timeline: '12-18 months',
-        estimatedCost: '$1,500,000 - $2,200,000',
-        expectedBenefit: '18% of facility energy from renewables',
-        complianceImpact: 'The renewable energy transition strongly supports Louisiana\'s commitment to the Climate Action Plan and positions Sasol Chemicals favorably for future carbon pricing mechanisms. Installation of on-site solar generation demonstrates compliance with evolving corporate sustainability reporting standards (GRI, CDP, TCFD) increasingly required by investors and stakeholders. This initiative may qualify the facility for federal Investment Tax Credits (ITC) and Louisiana\'s renewable energy incentive programs, while also contributing to the company\'s Scope 2 emissions reduction targets under EPA greenhouse gas reporting requirements. The project enhances regulatory standing and builds goodwill with Louisiana DEQ.',
-        environmentalBenefit: 'Renewable energy implementation will eliminate approximately 2,100 tons of CO₂ emissions annually, representing the largest single carbon reduction initiative among the three recommendations. The 2MW solar installation will generate clean electricity equivalent to powering 300 homes, while reducing reliance on fossil fuel-based grid power during Louisiana\'s peak summer months. This transition supports regional air quality improvements by decreasing demand on natural gas power plants, which are significant sources of NOx and SO₂ emissions. Furthermore, the project demonstrates industrial leadership in renewable energy adoption and serves as a model for other petrochemical facilities in the Gulf Coast region, contributing to broader climate change mitigation efforts.'
-      }
-    ]
-  };
-
   // Fetch AI recommendations
-  const fetchAIInsights = async () => {
+  const fetchAIInsights = useCallback(async () => {
     setAiLoading(true);
     try {
-      // Use hardcoded recommendations instead of API call
-      // This ensures all modal data (timeline, cost, benefit, compliance, environmental) is populated
-      setAiRecommendations(dashboardData.recommendations);
+      setAiRecommendations(dashboardData?.recommendations || []);
       setAiInsights({
         trendAnalysis: null,
         keyInsights: []
@@ -339,7 +43,7 @@ function CompanyDashboard() {
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [dashboardData?.recommendations]);
 
   // Handle recommendation action - opens detailed modal
   const handleRecommendationAction = (recommendation) => {
@@ -421,17 +125,35 @@ function CompanyDashboard() {
 
   useEffect(() => {
     // Simulate loading and fetch AI data
-    const loadData = async () => {
-      await fetchAIInsights();
-      setTimeout(() => setLoading(false), 800);
-    };
-    loadData();
-  }, []);
+    if (!dataLoading) {
+      fetchAIInsights();
+      const timeout = setTimeout(() => setPageLoading(false), 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [dataLoading, fetchAIInsights]);
 
-  if (loading) {
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const isLoading = pageLoading || dataLoading;
+
+  if (isLoading) {
     return (
       <div className="loading">
         <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="loading">
+        <p className="error">Unable to load dashboard data: {dataError.message}</p>
+        <button className="sign-out-btn" onClick={() => window.location.reload()}>
+          Retry
+        </button>
       </div>
     );
   }
@@ -446,7 +168,7 @@ function CompanyDashboard() {
             <p>Your Carbon Capture Dashboard</p>
           </div>
         </div>
-        <button className="sign-out-btn" onClick={() => navigate('/')}>
+        <button className="sign-out-btn" onClick={handleSignOut}>
           Sign Out
         </button>
       </header>

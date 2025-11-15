@@ -8,17 +8,52 @@ import './App.css';
 
 import CompanySignIn from './pages/CompanySignIn';
 import RegulatorSignIn from './pages/RegulatorSignIn';
+import { useAuth } from './context/AuthContext';
 
-function RequireCompanyAuth({ children }) {
+function CompanyRoute({ children }) {
   const location = useLocation();
-  const authed = sessionStorage.getItem('company_authed') === 'true';
-  return authed ? children : <Navigate to="/company-signin" replace state={{ from: location.pathname }} />;
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/company-signin" replace state={{ from: location.pathname }} />;
+  }
+
+  if (profile?.role !== 'company' && profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }
 
-function RequireRegulatorAuth({ children }) {
+function RegulatorRoute({ children }) {
   const location = useLocation();
-  const authed = sessionStorage.getItem('regulator_authed') === 'true';
-  return authed ? children : <Navigate to="/regulator-signin" replace state={{ from: location.pathname }} />;
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/regulator-signin" replace state={{ from: location.pathname }} />;
+  }
+
+  if (profile?.role !== 'regulator' && profile?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }
 
 export default function App() {
@@ -36,17 +71,17 @@ export default function App() {
           <Route
             path="/company"
             element={
-              <RequireCompanyAuth>
+              <CompanyRoute>
                 <CompanyDashboard />
-              </RequireCompanyAuth>
+              </CompanyRoute>
             }
           />
           <Route
             path="/regulator"
             element={
-              <RequireRegulatorAuth>
+              <RegulatorRoute>
                 <RegulatorDashboard />
-              </RequireRegulatorAuth>
+              </RegulatorRoute>
             }
           />
 

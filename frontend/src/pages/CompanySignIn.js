@@ -1,23 +1,42 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './SignIn.css';
+import { useAuth } from '../context/AuthContext';
 
 function CompanySignIn() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const location = useLocation();
+  const { signInWithPassword, refreshProfile } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
-    // ✅ Demo credentials
-    if (username === 'sasolla' && password === 'industries123') {
-      sessionStorage.setItem('company_authed', 'true'); // session flag
-      navigate('/company'); // protected route
-    } else {
-      setError('Invalid credentials. Please try again.');
+    try {
+      const { data } = await signInWithPassword({ email, password });
+
+      if (!data?.session?.user) {
+        throw new Error('Authentication failed. Check your credentials.');
+      }
+
+      const updatedProfile = await refreshProfile();
+
+      if (updatedProfile && updatedProfile.role !== 'company' && updatedProfile.role !== 'admin') {
+        setError('This account does not have company access. Contact an administrator.');
+        return;
+      }
+
+      const redirectPath = location.state?.from || '/company';
+      navigate(redirectPath, { replace: true });
+    } catch (authError) {
+      setError(authError.message ?? 'Unable to sign in. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -25,14 +44,15 @@ function CompanySignIn() {
     <div className="signin-page">
       <div className="signin-container">
         <h2>Company Sign In</h2>
-        <p>Access your CarbonSense dashboard</p>
+        <p>Access your CarbonSight dashboard</p>
         <form onSubmit={handleSubmit} className="signin-form">
-          <label>Username</label>
+          <label>Email</label>
           <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your company username"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="company.user@example.com"
+            autoComplete="email"
             required
           />
           <label>Password</label>
@@ -41,13 +61,21 @@ function CompanySignIn() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
+            autoComplete="current-password"
             required
           />
           {error && <div className="error">{error}</div>}
-          <button type="submit" className="signin-btn">
-            Sign In
+          <button type="submit" className="signin-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing In…' : 'Sign In'}
           </button>
         </form>
+
+        <div className="signin-hint">
+          <p>
+            Need an account? Invite users via Supabase Auth and assign them the <code>company</code> role in the
+            <code>profiles</code> table.
+          </p>
+        </div>
 
         <button className="back-btn" onClick={() => navigate('/')}>
           ← Back to Home
