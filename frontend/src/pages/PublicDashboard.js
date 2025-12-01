@@ -2,69 +2,35 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './PublicDashboard.css';
+import { fetchLouisianaEmissions } from '../utils/climateTraceApi';
 
 function PublicDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
   const [selectedSector, setSelectedSector] = useState('All Sectors');
+  const [completeEmissionsData, setCompleteEmissionsData] = useState([]);
 
-  // Comprehensive hardcoded emissions data - anonymized with generic facility names
-  // Based on Climate TRACE data structure for Louisiana emissions
-  const completeEmissionsData = [
-    // Baton Rouge - Manufacturing Hub
-    { year: '2020', region: 'Baton Rouge', sector: 'Manufacturing', emissions: 18.5, facilities: 4, facilityList: ['Industrial Complex A', 'Chemical Plant 1', 'Facility B', 'Manufacturing Site C'] },
-    { year: '2020', region: 'Baton Rouge', sector: 'Energy', emissions: 12.2, facilities: 2, facilityList: ['Power Station 1', 'Energy Facility A'] },
-    { year: '2020', region: 'Baton Rouge', sector: 'Transportation', emissions: 8.3, facilities: 3, facilityList: ['Transport Hub A', 'Logistics Center 1', 'Distribution Point B'] },
-    { year: '2020', region: 'Baton Rouge', sector: 'Buildings', emissions: 4.5, facilities: 2, facilityList: ['Commercial Complex A', 'Industrial Building 1'] },
-    { year: '2020', region: 'Baton Rouge', sector: 'Agriculture', emissions: 1.5, facilities: 1, facilityList: ['Agricultural Facility A'] },
-
-    // Lake Charles - Petrochemical Region
-    { year: '2020', region: 'Lake Charles', sector: 'Manufacturing', emissions: 22.8, facilities: 5, facilityList: ['Petrochemical Complex A', 'Industrial Facility 1', 'Chemical Plant 2', 'Processing Site A', 'Facility D'] },
-    { year: '2020', region: 'Lake Charles', sector: 'Energy', emissions: 8.5, facilities: 2, facilityList: ['Power Plant A', 'Energy Complex 1'] },
-    { year: '2020', region: 'Lake Charles', sector: 'Transportation', emissions: 2.7, facilities: 2, facilityList: ['Port Facility A', 'Transport Center 1'] },
-    { year: '2020', region: 'Lake Charles', sector: 'Buildings', emissions: 0.8, facilities: 1, facilityList: ['Office Complex A'] },
-    { year: '2020', region: 'Lake Charles', sector: 'Agriculture', emissions: 0.2, facilities: 0, facilityList: [] },
-
-    // New Orleans - Mixed Use
-    { year: '2020', region: 'New Orleans', sector: 'Transportation', emissions: 12.5, facilities: 3, facilityList: ['Port of Entry A', 'Logistics Hub 1', 'Transportation Center B'] },
-    { year: '2020', region: 'New Orleans', sector: 'Buildings', emissions: 9.8, facilities: 2, facilityList: ['Downtown Complex A', 'Commercial District 1'] },
-    { year: '2020', region: 'New Orleans', sector: 'Manufacturing', emissions: 4.2, facilities: 1, facilityList: ['Industrial Site A'] },
-    { year: '2020', region: 'New Orleans', sector: 'Energy', emissions: 2.5, facilities: 1, facilityList: ['Power Facility 1'] },
-    { year: '2020', region: 'New Orleans', sector: 'Agriculture', emissions: 1.0, facilities: 1, facilityList: ['Farm Complex A'] },
-
-    // Lafayette - Agriculture and Energy
-    { year: '2020', region: 'Lafayette', sector: 'Agriculture', emissions: 11.3, facilities: 3, facilityList: ['Agricultural Complex A', 'Farm Facility 1', 'Crop Processing Site B'] },
-    { year: '2020', region: 'Lafayette', sector: 'Energy', emissions: 8.7, facilities: 2, facilityList: ['Natural Gas Facility A', 'Energy Plant 1'] },
-    { year: '2020', region: 'Lafayette', sector: 'Manufacturing', emissions: 4.5, facilities: 2, facilityList: ['Processing Plant A', 'Industrial Facility 2'] },
-    { year: '2020', region: 'Lafayette', sector: 'Transportation', emissions: 2.0, facilities: 1, facilityList: ['Distribution Center A'] },
-    { year: '2020', region: 'Lafayette', sector: 'Buildings', emissions: 0.5, facilities: 1, facilityList: ['Commercial Building A'] },
-
-    // Shreveport - Energy Focus
-    { year: '2020', region: 'Shreveport', sector: 'Energy', emissions: 7.8, facilities: 2, facilityList: ['Power Generation A', 'Energy Facility 2'] },
-    { year: '2020', region: 'Shreveport', sector: 'Manufacturing', emissions: 3.5, facilities: 1, facilityList: ['Industrial Plant A'] },
-    { year: '2020', region: 'Shreveport', sector: 'Transportation', emissions: 2.2, facilities: 1, facilityList: ['Transport Facility A'] },
-    { year: '2020', region: 'Shreveport', sector: 'Agriculture', emissions: 1.0, facilities: 1, facilityList: ['Agricultural Site A'] },
-    { year: '2020', region: 'Shreveport', sector: 'Buildings', emissions: 0.5, facilities: 0, facilityList: [] },
-  ];
-
-  // Generate data for years 2021-2024 with realistic trends
-  const allEmissionsData = useMemo(() => {
-    const generateYearData = (baseData, year, growthRate) => {
-      return baseData.map(item => ({
-        ...item,
-        year: year.toString(),
-        emissions: parseFloat((item.emissions * growthRate).toFixed(2))
-      }));
+  // Fetch real Climate TRACE data on mount
+  useEffect(() => {
+    const loadEmissionsData = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchLouisianaEmissions();
+        setCompleteEmissionsData(data);
+      } catch (error) {
+        console.error('Failed to load Climate TRACE data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    return [
-      ...completeEmissionsData,
-      ...generateYearData(completeEmissionsData, 2021, 1.03),
-      ...generateYearData(completeEmissionsData, 2022, 1.05),
-      ...generateYearData(completeEmissionsData, 2023, 1.02),
-      ...generateYearData(completeEmissionsData, 2024, 0.98),
-    ];
+    loadEmissionsData();
+  }, []);
+
+  // All emissions data (already includes all years from the API)
+  const allEmissionsData = useMemo(() => {
+    return completeEmissionsData;
   }, [completeEmissionsData]);
 
   // Filter data based on selected region and sector
@@ -179,14 +145,11 @@ function PublicDashboard() {
   const regions = ['All Regions', 'Baton Rouge', 'Lake Charles', 'New Orleans', 'Lafayette', 'Shreveport'];
   const sectors = ['All Sectors', 'Manufacturing', 'Energy', 'Transportation', 'Buildings', 'Agriculture'];
 
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 800);
-  }, []);
-
   if (loading) {
     return (
       <div className="loading">
         <div className="spinner"></div>
+        <p style={{ marginTop: '1rem', color: '#8892b0' }}>Loading real-world emissions data from Climate TRACE...</p>
       </div>
     );
   }
@@ -202,7 +165,12 @@ function PublicDashboard() {
             Back to Home
           </button>
           <div className="logo-icon">CS</div>
-          <h2>Public Dashboard</h2>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h2>Public Dashboard</h2>
+            <p style={{ fontSize: '0.75rem', color: '#8892b0', margin: '0.25rem 0 0 0' }}>
+              Powered by <strong style={{ color: '#34d3fd' }}>Climate TRACE</strong> real-world emissions data
+            </p>
+          </div>
         </div>
       </header>
 
