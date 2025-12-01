@@ -1953,3 +1953,122 @@
     width: 95%;
   }
 }
+
+
+/* Scraped regulatory deadlines section */
+
+.deadlines-section {
+  margin-top: 32px;
+  background: linear-gradient(135deg, #1a1f3a 0%, #252b4a 100%);
+  border-radius: 16px;
+  padding: 24px 24px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.deadlines-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.deadlines-header p {
+  font-size: 14px;
+  color: #8892b0;
+  margin: 0 0 16px 0;
+}
+
+.deadlines-loading,
+.deadlines-error,
+.deadlines-empty {
+  font-size: 14px;
+  color: #8892b0;
+}
+
+.deadlines-error {
+  color: #f97373;
+}
+
+.deadlines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.deadline-card {
+  background: rgba(10, 14, 39, 0.9);
+  border-radius: 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s ease;
+}
+
+.deadline-card:hover {
+  border-color: rgba(52, 211, 253, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+}
+
+.deadline-top-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.deadline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.deadline-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #34d3fd;
+  white-space: nowrap;
+}
+
+.deadline-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.deadline-jurisdiction {
+  color: #a78bfa;
+  font-weight: 500;
+}
+
+.deadline-source {
+  color: #64748b;
+  font-style: italic;
+}
+
+.deadline-description {
+  font-size: 13px;
+  color: #cbd5f5;
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.deadline-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: #34d3fd;
+  text-decoration: none;
+}
+
+.deadline-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .deadlines-grid {
+    grid-template-columns: 1fr;
+  }
+}

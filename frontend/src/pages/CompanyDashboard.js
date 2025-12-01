@@ -27,6 +27,11 @@ function CompanyDashboard() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
 
+  // NEW: scraped regulatory deadlines state
+  const [deadlines, setDeadlines] = useState([]);
+  const [deadlinesLoading, setDeadlinesLoading] = useState(true);
+  const [deadlinesError, setDeadlinesError] = useState(null);
+
   // Fetch AI recommendations
   const fetchAIInsights = useCallback(async () => {
     setAiLoading(true);
@@ -44,6 +49,69 @@ function CompanyDashboard() {
       setAiLoading(false);
     }
   }, [dashboardData?.recommendations]);
+
+  // NEW: helper to format deadline dates from deadlines.json
+  const formatDeadlineDate = (dateStr) => {
+    if (!dateStr) return 'Date TBA';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // NEW: load scraped deadlines from public/deadlines.json
+  useEffect(() => {
+    const loadDeadlines = async () => {
+      try {
+        setDeadlinesLoading(true);
+        setDeadlinesError(null);
+
+        const res = await fetch('/deadlines.json');
+        if (!res.ok) {
+          throw new Error(`Failed to load deadlines.json (status ${res.status})`);
+        }
+        const raw = await res.json();
+
+        // Handle your structure: { generated_at, count, deadlines: [ ... ] }
+        const list = Array.isArray(raw)
+          ? raw
+          : (Array.isArray(raw.deadlines) ? raw.deadlines : []);
+
+        const normalized = list
+          .map((d, idx) => ({
+            id: d.id || idx,
+            source: d.source || 'Unknown source',
+            jurisdiction: d.jurisdiction || 'Unknown',
+            title: d.title || 'Untitled deadline',
+            // Prefer the human-friendly text if present
+            description: d.deadline_text || d.raw_line || '',
+            // Use ISO date when present so we can sort + format
+            deadline: d.deadline_date || null,
+            url: d.source_url || null,
+            _dateObj: d.deadline_date ? new Date(d.deadline_date) : null
+          }))
+          .sort((a, b) => {
+            if (!a._dateObj && !b._dateObj) return 0;
+            if (!a._dateObj) return 1;
+            if (!b._dateObj) return -1;
+            return a._dateObj - b._dateObj;
+          });
+
+        setDeadlines(normalized);
+      } catch (err) {
+        console.error('Error loading scraped deadlines:', err);
+        setDeadlinesError(err);
+        setDeadlines([]);
+      } finally {
+        setDeadlinesLoading(false);
+      }
+    };
+
+    loadDeadlines();
+  }, []);
 
   // Handle recommendation action - opens detailed modal
   const handleRecommendationAction = (recommendation) => {
@@ -234,200 +302,200 @@ function CompanyDashboard() {
               </div>
             </div>
 
-        <div className="recommendations-section">
-          <div className="section-header">
-            <div className="section-title">
-              <svg viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              <span>AI-Powered Recommendations</span>
-            </div>
-            <p>Based on your recent activity and performance data</p>
-          </div>
-
-          {aiLoading ? (
-            <div className="ai-loading">
-              <div className="spinner"></div>
-              <p>Generating AI recommendations...</p>
-            </div>
-          ) : (
-            <div className="recommendations-grid">
-              {(aiRecommendations.length > 0 ? aiRecommendations : dashboardData.recommendations).map((rec, index) => (
-                <div key={index} className={`recommendation-card ${rec.impact}-impact`}>
-                  <div className="rec-header">
-                    <div className="rec-icon">
-                      {rec.impact === 'high' && '⚠️'}
-                      {rec.impact === 'medium' && '🎯'}
-                      {rec.impact === 'low' && '💡'}
-                    </div>
-                    <span className={`impact-badge ${rec.impact}`}>
-                      {rec.impact} impact
-                    </span>
-                    {aiRecommendations.length > 0 && (
-                      <span className="ai-badge">✨ AI</span>
-                    )}
-                  </div>
-                  <h4>{rec.title}</h4>
-                  <p>{rec.description}</p>
-                  <div className="rec-footer">
-                    <div className="rec-category">
-                      <span className="category-label">
-                        {rec.category || `Priority ${rec.priority || 1}`}
-                      </span>
-                      <span className="action-label">
-                        {rec.action || rec.estimated_reduction || 'Take action'}
-                      </span>
-                    </div>
-                    <button className="rec-action-btn" onClick={() => handleRecommendationAction(rec)}>
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </button>
-                  </div>
+            <div className="recommendations-section">
+              <div className="section-header">
+                <div className="section-title">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  <span>AI-Powered Recommendations</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="tabs-nav">
-          <button 
-            className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tasks')}
-          >
-            Tasks ({dashboardData.activeTasks})
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('documents')}
-          >
-            Documents
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'climate-data' ? 'active' : ''}`}
-            onClick={() => setActiveTab('climate-data')}
-          >
-            Real-World Data
-          </button>
-        </div>
-
-        {activeTab === 'overview' && (
-          <div className="activity-section">
-            <h3>Recent Activity</h3>
-            <div className="activity-list">
-              {dashboardData.activities.map((activity, index) => (
-                <div key={index} className={`activity-item ${activity.type}`}>
-                  <div className={`activity-dot ${activity.type}`}></div>
-                  <div className="activity-content">
-                    <p className="activity-title">{activity.title}</p>
-                    <span className="activity-time">{activity.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'tasks' && (
-          <div className="tasks-section">
-            <div className="section-header">
-              <h3>Active Tasks</h3>
-              <p>Manage your compliance and operational tasks</p>
-            </div>
-            <div className="tasks-grid">
-              {dashboardData.tasks.map((task) => (
-                <div key={task.id} className={`task-card ${task.priority}`}>
-                  <div className="task-header">
-                    <div className="task-priority">
-                      <span className={`priority-badge ${task.priority}`}>
-                        {task.priority === 'urgent' ? '🔥' : '📋'} {task.priority}
-                      </span>
-                      <span className={`category-badge ${task.category}`}>
-                        {task.category}
-                      </span>
-                    </div>
-                    <div className="task-due">Due: {task.due}</div>
-                  </div>
-                  <h4>{task.title}</h4>
-                  <p>{task.description}</p>
-                  <div className="task-actions">
-                    <button 
-                      className="task-action-btn primary"
-                      onClick={() => handleTaskAction(task)}
-                    >
-                      {task.category === 'compliance' ? 'Submit Document' : 'Start Task'}
-                    </button>
-                    <button 
-                      className="task-action-btn secondary"
-                      onClick={() => handleCompleteTask(task.id)}
-                    >
-                      Mark Complete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'documents' && (
-          <div className="documents-section">
-            <div className="section-header">
-              <h3>Document Management</h3>
-              <p>Upload and manage compliance documents</p>
-            </div>
-            
-            <div className="upload-area">
-              <div className="upload-zone">
-                <svg viewBox="0 0 24 24" fill="none" className="upload-icon">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-                <h4>Upload Documents</h4>
-                <p>Drag and drop files here, or click to select</p>
-                <input 
-                  type="file" 
-                  multiple 
-                  accept=".pdf,.doc,.docx,.xlsx,.xls" 
-                  onChange={handleFileUpload}
-                  className="file-input"
-                />
-                <button className="upload-btn" onClick={() => document.querySelector('.file-input').click()}>Choose Files</button>
+                <p>Based on your recent activity and performance data</p>
               </div>
-            </div>
 
-            <div className="documents-list">
-              <h4>Uploaded Documents</h4>
-              {uploadedFiles.map((file, index) => (
-                <div key={index} className="document-item">
-                  <div className="document-icon">
-                    {file.name.endsWith('.pdf') ? '📄' : '📊'}
-                  </div>
-                  <div className="document-info">
-                    <h5>{file.name}</h5>
-                    <p>Type: {file.type} • Uploaded: {file.date}</p>
-                  </div>
-                  <span className={`document-status ${file.status}`}>
-                    {file.status === 'approved' ? '✅ Approved' : 
-                     file.status === 'under_review' ? '🔍 Under Review' : 
-                     '⏳ Pending'}
-                  </span>
-                  <button className="document-action-btn" onClick={() => alert(`Viewing document: ${file.name}\n\nThis would normally open a document viewer.`)}>View</button>
+              {aiLoading ? (
+                <div className="ai-loading">
+                  <div className="spinner"></div>
+                  <p>Generating AI recommendations...</p>
                 </div>
-              ))}
+              ) : (
+                <div className="recommendations-grid">
+                  {(aiRecommendations.length > 0 ? aiRecommendations : dashboardData.recommendations).map((rec, index) => (
+                    <div key={index} className={`recommendation-card ${rec.impact}-impact`}>
+                      <div className="rec-header">
+                        <div className="rec-icon">
+                          {rec.impact === 'high' && '⚠️'}
+                          {rec.impact === 'medium' && '🎯'}
+                          {rec.impact === 'low' && '💡'}
+                        </div>
+                        <span className={`impact-badge ${rec.impact}`}>
+                          {rec.impact} impact
+                        </span>
+                        {aiRecommendations.length > 0 && (
+                          <span className="ai-badge">✨ AI</span>
+                        )}
+                      </div>
+                      <h4>{rec.title}</h4>
+                      <p>{rec.description}</p>
+                      <div className="rec-footer">
+                        <div className="rec-category">
+                          <span className="category-label">
+                            {rec.category || `Priority ${rec.priority || 1}`}
+                          </span>
+                          <span className="action-label">
+                            {rec.action || rec.estimated_reduction || 'Take action'}
+                          </span>
+                        </div>
+                        <button className="rec-action-btn" onClick={() => handleRecommendationAction(rec)}>
+                          <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
 
-        {activeTab === 'climate-data' && (
-          <ClimateTraceData user={dashboardData} />
-        )}
+            <div className="tabs-nav">
+              <button 
+                className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                onClick={() => setActiveTab('overview')}
+              >
+                Overview
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tasks')}
+              >
+                Tasks ({dashboardData.activeTasks})
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
+                onClick={() => setActiveTab('documents')}
+              >
+                Documents
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'climate-data' ? 'active' : ''}`}
+                onClick={() => setActiveTab('climate-data')}
+              >
+                Real-World Data
+              </button>
+            </div>
+
+            {activeTab === 'overview' && (
+              <div className="activity-section">
+                <h3>Recent Activity</h3>
+                <div className="activity-list">
+                  {dashboardData.activities.map((activity, index) => (
+                    <div key={index} className={`activity-item ${activity.type}`}>
+                      <div className={`activity-dot ${activity.type}`}></div>
+                      <div className="activity-content">
+                        <p className="activity-title">{activity.title}</p>
+                        <span className="activity-time">{activity.time}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div className="tasks-section">
+                <div className="section-header">
+                  <h3>Active Tasks</h3>
+                  <p>Manage your compliance and operational tasks</p>
+                </div>
+                <div className="tasks-grid">
+                  {dashboardData.tasks.map((task) => (
+                    <div key={task.id} className={`task-card ${task.priority}`}>
+                      <div className="task-header">
+                        <div className="task-priority">
+                          <span className={`priority-badge ${task.priority}`}>
+                            {task.priority === 'urgent' ? '🔥' : '📋'} {task.priority}
+                          </span>
+                          <span className={`category-badge ${task.category}`}>
+                            {task.category}
+                          </span>
+                        </div>
+                        <div className="task-due">Due: {task.due}</div>
+                      </div>
+                      <h4>{task.title}</h4>
+                      <p>{task.description}</p>
+                      <div className="task-actions">
+                        <button 
+                          className="task-action-btn primary"
+                          onClick={() => handleTaskAction(task)}
+                        >
+                          {task.category === 'compliance' ? 'Submit Document' : 'Start Task'}
+                        </button>
+                        <button 
+                          className="task-action-btn secondary"
+                          onClick={() => handleCompleteTask(task.id)}
+                        >
+                          Mark Complete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="documents-section">
+                <div className="section-header">
+                  <h3>Document Management</h3>
+                  <p>Upload and manage compliance documents</p>
+                </div>
+                
+                <div className="upload-area">
+                  <div className="upload-zone">
+                    <svg viewBox="0 0 24 24" fill="none" className="upload-icon">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <h4>Upload Documents</h4>
+                    <p>Drag and drop files here, or click to select</p>
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept=".pdf,.doc,.docx,.xlsx,.xls" 
+                      onChange={handleFileUpload}
+                      className="file-input"
+                    />
+                    <button className="upload-btn" onClick={() => document.querySelector('.file-input').click()}>Choose Files</button>
+                  </div>
+                </div>
+
+                <div className="documents-list">
+                  <h4>Uploaded Documents</h4>
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="document-item">
+                      <div className="document-icon">
+                        {file.name.endsWith('.pdf') ? '📄' : '📊'}
+                      </div>
+                      <div className="document-info">
+                        <h5>{file.name}</h5>
+                        <p>Type: {file.type} • Uploaded: {file.date}</p>
+                      </div>
+                      <span className={`document-status ${file.status}`}>
+                        {file.status === 'approved' ? '✅ Approved' : 
+                         file.status === 'under_review' ? '🔍 Under Review' : 
+                         '⏳ Pending'}
+                      </span>
+                      <button className="document-action-btn" onClick={() => alert(`Viewing document: ${file.name}\n\nThis would normally open a document viewer.`)}>View</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'climate-data' && (
+              <ClimateTraceData user={dashboardData} />
+            )}
           </>
         )}
 
@@ -649,6 +717,66 @@ function CompanyDashboard() {
                 </div>
               ))}
             </div>
+
+            {/* NEW: scraped regulatory deadlines section below the tasks */}
+            <div className="deadlines-section">
+              <div className="deadlines-header">
+                <h3>Regulatory Deadlines (Extra)</h3>
+                <p>
+                  Live filing and reporting deadlines from Louisiana and national
+                  climate / air regulations
+                </p>
+              </div>
+
+              {deadlinesLoading && (
+                <div className="deadlines-loading">Loading deadlines…</div>
+              )}
+
+              {deadlinesError && !deadlinesLoading && (
+                <p className="deadlines-error">
+                  Couldn&apos;t load scraped deadlines: {deadlinesError.message}
+                </p>
+              )}
+
+              {!deadlinesLoading && !deadlinesError && deadlines.length === 0 && (
+                <p className="deadlines-empty">
+                  No deadlines found in <code>deadlines.json</code>. Run the scraper
+                  to populate this list.
+                </p>
+              )}
+
+              {!deadlinesLoading && !deadlinesError && deadlines.length > 0 && (
+                <div className="deadlines-grid">
+                  {deadlines.map((d) => (
+                    <div key={d.id} className="deadline-card">
+                      <div className="deadline-top-row">
+                        <span className="deadline-title">{d.title}</span>
+                        <span className="deadline-date">
+                          {formatDeadlineDate(d.deadline)}
+                        </span>
+                      </div>
+                      <div className="deadline-meta-row">
+                        <span className="deadline-jurisdiction">{d.jurisdiction}</span>
+                        <span className="deadline-source">{d.source}</span>
+                      </div>
+                      {d.description && (
+                        <p className="deadline-description">{d.description}</p>
+                      )}
+                      {d.url && (
+                        <a
+                          href={d.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="deadline-link"
+                        >
+                          View source
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -789,3 +917,5 @@ function CompanyDashboard() {
 }
 
 export default CompanyDashboard;
+
+
