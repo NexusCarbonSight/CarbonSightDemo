@@ -4,6 +4,8 @@ import './CompanyDashboard.css';
 import ClimateTraceData from '../components/ClimateTraceData';
 import { useAuth } from '../context/AuthContext';
 import { useCompanyDashboardData } from '../hooks/useCompanyDashboardData';
+import { getHuggingFaceService } from '../services/huggingfaceService';
+import { supabase } from '../lib/supabaseClient';
 
 function CompanyDashboard() {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ function CompanyDashboard() {
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [aiInsights, setAiInsights] = useState({});
   const [aiLoading, setAiLoading] = useState(false);
+  const [dismissedRecs, setDismissedRecs] = useState([]);
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { type: 'ai', text: 'Hello! I\'m your AI assistant. I can help you with emissions analysis, compliance recommendations, and operational insights. What would you like to know?' }
@@ -32,23 +35,84 @@ function CompanyDashboard() {
   const [deadlinesLoading, setDeadlinesLoading] = useState(true);
   const [deadlinesError, setDeadlinesError] = useState(null);
 
-  // Fetch AI recommendations
+  // Fetch AI recommendations using HuggingFace
   const fetchAIInsights = useCallback(async () => {
+    if (!dashboardData?.orgId) return;
+    
     setAiLoading(true);
     try {
-      setAiRecommendations(dashboardData?.recommendations || []);
+      const hfService = getHuggingFaceService();
+      
+      // Get existing recommendations from database
+      const { data: existingRecs } = await supabase
+        .from('recommendations')
+        .select('*')
+        .eq('org_id', dashboardData.orgId)
+        .eq('is_implemented', false)
+        .order('created_at', { ascending: false });
+      
+      // If we have existing AI recommendations less than 24 hours old, use them
+      const recentAiRecs = existingRecs?.filter(rec => {
+        const isRecent = new Date(rec.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return rec.is_ai_generated && isRecent;
+      }) || [];
+      
+      let aiRecs = [];
+      
+      // Only generate new recommendations if we don't have recent ones
+      if (recentAiRecs.length === 0) {
+        aiRecs = await hfService.generateComplianceRecommendations(
+          dashboardData?.emissionsData || [],
+          dashboardData?.complianceTasks || [],
+          dashboardData?.facilities || []
+        );
+        
+        // Save new AI recommendations to database
+        if (aiRecs.length > 0) {
+          const recsToInsert = aiRecs.map(rec => ({
+            org_id: dashboardData.orgId,
+            title: rec.title,
+            description: rec.description,
+            impact: rec.impact,
+            category: rec.category,
+            estimated_reduction: rec.estimated_reduction,
+            timeline: rec.timeline,
+            is_ai_generated: true,
+            is_implemented: false,
+            metadata: {}
+          }));
+          
+          const { data: inserted, error: insertError } = await supabase
+            .from('recommendations')
+            .insert(recsToInsert)
+            .select();
+          
+          if (insertError) {
+            console.error('Failed to save AI recommendations:', insertError);
+          } else {
+            aiRecs = inserted;
+          }
+        }
+      } else {
+        aiRecs = recentAiRecs;
+      }
+      
+      // Merge with all existing recommendations from database
+      const dbRecs = dashboardData?.recommendations || [];
+      const allRecs = [...aiRecs, ...dbRecs].filter(rec => !dismissedRecs.includes(rec.id));
+      
+      setAiRecommendations(allRecs);
       setAiInsights({
-        trendAnalysis: null,
-        keyInsights: []
+        trendAnalysis: hfService.calculateTrend(dashboardData?.emissionsData || []),
+        keyInsights: aiRecs.map(r => r.title)
       });
     } catch (error) {
       console.error('Failed to fetch AI insights:', error);
-      // Fallback to existing static recommendations
-      setAiRecommendations(dashboardData.recommendations);
+      setAiRecommendations(dashboardData?.recommendations || []);
     } finally {
       setAiLoading(false);
     }
-  }, [dashboardData?.recommendations]);
+  }, [dashboardData?.orgId, dashboardData?.recommendations, dashboardData?.emissionsData, dashboardData?.complianceTasks, dashboardData?.facilities, dismissedRecs]);
 
   // NEW: helper to format deadline dates from deadlines.json
   const formatDeadlineDate = (dateStr) => {
@@ -118,6 +182,32 @@ function CompanyDashboard() {
     setSelectedRecommendation(recommendation);
   };
 
+  // Dismiss a recommendation
+  const handleDismissRecommendation = async (recId, e) => {
+    e.stopPropagation();
+    setDismissedRecs(prev => [...prev, recId]);
+    setAiRecommendations(prev => prev.filter(rec => rec.id !== recId));
+  };
+
+  // Mark recommendation as complete/implemented
+  const handleCompleteRecommendation = async (recId, e) => {
+    if (e) e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('recommendations')
+        .update({ is_implemented: true })
+        .eq('id', recId);
+      
+      if (error) throw error;
+      
+      setAiRecommendations(prev => prev.filter(rec => rec.id !== recId));
+      setSelectedRecommendation(null);
+    } catch (error) {
+      console.error('Failed to mark recommendation as complete:', error);
+    }
+  };
+
   // Handle metric card clicks for navigation
   const handleEmissionsClick = () => {
     setCurrentView('emissions');
@@ -171,24 +261,40 @@ function CompanyDashboard() {
     setChatInput('');
     setChatMessages(prev => [...prev, { type: 'user', text: userMessage }]);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(userMessage);
+    // Generate AI response using HuggingFace with comprehensive company context
+    try {
+      const hfService = getHuggingFaceService();
+      const context = {
+        companyName: dashboardData?.company,
+        emissionsRate: dashboardData?.emissionsRate,
+        emissionsChange: dashboardData?.emissionsChange,
+        facilities: dashboardData?.facilities || [],
+        complianceStatus: dashboardData?.complianceStatus,
+        complianceTasks: dashboardData?.complianceTasks || [],
+        recentActivities: dashboardData?.activities?.slice(0, 5) || [],
+        recommendations: aiRecommendations.slice(0, 3)
+      };
+      
+      const aiResponse = await hfService.generateChatResponse(userMessage, context);
       setChatMessages(prev => [...prev, { type: 'ai', text: aiResponse }]);
-    }, 1000);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const fallbackResponse = generateAIResponse(userMessage);
+      setChatMessages(prev => [...prev, { type: 'ai', text: fallbackResponse }]);
+    }
   };
 
   const generateAIResponse = (userInput) => {
-    const input = userInput.toLowerCase();
-    if (input.includes('emission') || input.includes('co2')) {
-      return 'Based on your current emissions rate of 360,333 tons CO₂/day, you\'re performing 12% better than target. Consider implementing the Plant C optimization I recommended to achieve further reductions.';
-    } else if (input.includes('compliance') || input.includes('regulation')) {
-      return 'Your compliance status is at 94% with the next deadline on Jan 15. I recommend prioritizing the sensor calibration in Plant C to maintain this excellent rate.';
-    } else if (input.includes('recommend') || input.includes('suggest')) {
-      return 'My top recommendation is optimizing Plant C operations. This could reduce emissions by 12% while improving efficiency. Would you like a detailed implementation plan?';
-    } else {
-      return 'I can help you with emissions analysis, compliance tracking, operational optimization, and regulatory guidance. What specific area would you like to explore?';
-    }
+    const hfService = getHuggingFaceService();
+    const context = {
+      companyName: dashboardData?.company,
+      emissionsRate: dashboardData?.emissionsRate,
+      emissionsChange: dashboardData?.emissionsChange,
+      facilities: dashboardData?.facilities || [],
+      complianceStatus: dashboardData?.complianceStatus,
+      complianceTasks: dashboardData?.complianceTasks || []
+    };
+    return hfService.getFallbackChatResponse(userInput, context);
   };
 
   useEffect(() => {
@@ -322,7 +428,7 @@ function CompanyDashboard() {
               ) : (
                 <div className="recommendations-grid">
                   {(aiRecommendations.length > 0 ? aiRecommendations : dashboardData.recommendations).map((rec, index) => (
-                    <div key={index} className={`recommendation-card ${rec.impact}-impact`}>
+                    <div key={rec.id || index} className={`recommendation-card ${rec.impact}-impact`}>
                       <div className="rec-header">
                         <div className="rec-icon">
                           {rec.impact === 'high' && '⚠️'}
@@ -332,7 +438,7 @@ function CompanyDashboard() {
                         <span className={`impact-badge ${rec.impact}`}>
                           {rec.impact} impact
                         </span>
-                        {aiRecommendations.length > 0 && (
+                        {rec.is_ai_generated && (
                           <span className="ai-badge">✨ AI</span>
                         )}
                       </div>
@@ -344,14 +450,23 @@ function CompanyDashboard() {
                             {rec.category || `Priority ${rec.priority || 1}`}
                           </span>
                           <span className="action-label">
-                            {rec.action || rec.estimated_reduction || 'Take action'}
+                            {rec.estimated_reduction ? `${rec.estimated_reduction} tons CO₂/year` : (rec.action || 'Take action')}
                           </span>
                         </div>
-                        <button className="rec-action-btn" onClick={() => handleRecommendationAction(rec)}>
-                          <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
-                          </svg>
-                        </button>
+                        <div className="rec-actions">
+                          <button 
+                            className="rec-dismiss-btn"
+                            onClick={(e) => handleDismissRecommendation(rec.id, e)}
+                            title="Dismiss recommendation"
+                          >
+                            Dismiss
+                          </button>
+                          <button className="rec-action-btn" onClick={() => handleRecommendationAction(rec)}>
+                            <svg viewBox="0 0 24 24" fill="none">
+                              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -840,11 +955,8 @@ function CompanyDashboard() {
               </div>
 
               <div className="recommendation-actions">
-                <button className="btn-primary" onClick={() => {
-                  alert('Implementation workflow initiated!\n\nThis would normally create tasks and assign team members.');
-                  setSelectedRecommendation(null);
-                }}>
-                  Implement Recommendation
+                <button className="btn-primary" onClick={() => handleCompleteRecommendation(selectedRecommendation.id)}>
+                  ✓ Mark as Complete
                 </button>
                 <button className="btn-secondary" onClick={() => setSelectedRecommendation(null)}>
                   Close

@@ -108,32 +108,7 @@ const defaultDashboardData = {
     { title: 'EPA Region 6 inspection scheduled for Lake Charles Complex', time: '3 days ago', type: 'info' },
   ],
   tasks: [],
-  recommendations: [
-    {
-      title: 'Optimize Transportation Fleet',
-      description:
-        'Transition to hybrid and electric vehicles for on-site transportation and material delivery. Analysis shows significant potential for emissions reduction through fleet modernization, including replacing diesel trucks with electric alternatives and implementing route optimization software.',
-      impact: 'high',
-      category: 'Transportation',
-      action: '1,200 tons CO₂/year',
-      facility: 'All Facilities',
-      detailedSteps: [
-        'Conduct comprehensive fleet audit to identify high-emission vehicles for replacement',
-        'Evaluate electric and hybrid vehicle options suitable for chemical facility operations',
-        'Install EV charging infrastructure at Lake Charles Complex and Westlake Facility',
-        'Implement route optimization software to reduce fuel consumption',
-        'Train drivers on eco-driving techniques and new vehicle technology',
-        'Establish partnership with local EV dealers for maintenance support',
-      ],
-      timeline: '6-12 months',
-      estimatedCost: '$150,000 - $300,000',
-      expectedBenefit: '40% reduction in fleet emissions',
-      complianceImpact:
-        "This initiative directly supports Louisiana's Clean Energy Initiative and positions Sasol Chemicals as a leader in sustainable operations. The fleet modernization will contribute to meeting EPA greenhouse gas reporting requirements under 40 CFR Part 98, potentially qualifying the company for state-level green energy incentives. Additionally, reduced emissions from transportation will help maintain compliance with Louisiana DEQ air quality standards in Calcasieu Parish, demonstrating corporate responsibility to local communities and regulators.",
-      environmentalBenefit:
-        'Fleet optimization will eliminate approximately 1,200 tons of CO₂ emissions annually, equivalent to removing 260 passenger vehicles from the road. Beyond carbon reduction, the transition to electric vehicles will significantly decrease nitrogen oxide (NOx) and particulate matter emissions in the Lake Charles area, improving local air quality for nearby communities in ZIP codes 70669, 70611, and 70605. This initiative also reduces noise pollution and demonstrates Sasol\'s commitment to environmental stewardship in the Gulf Coast region.',
-    },
-  ],
+  recommendations: [],
 };
 
 function formatDate(date) {
