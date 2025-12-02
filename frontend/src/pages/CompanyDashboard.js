@@ -97,9 +97,8 @@ function CompanyDashboard() {
         aiRecs = recentAiRecs;
       }
       
-      // Merge with all existing recommendations from database
-      const dbRecs = dashboardData?.recommendations || [];
-      const allRecs = [...aiRecs, ...dbRecs].filter(rec => !dismissedRecs.includes(rec.id));
+      // aiRecs already contains all database recommendations, no need to merge
+      const allRecs = aiRecs.filter(rec => !dismissedRecs.includes(rec.id));
       
       setAiRecommendations(allRecs);
       setAiInsights({
@@ -185,8 +184,22 @@ function CompanyDashboard() {
   // Dismiss a recommendation
   const handleDismissRecommendation = async (recId, e) => {
     e.stopPropagation();
-    setDismissedRecs(prev => [...prev, recId]);
-    setAiRecommendations(prev => prev.filter(rec => rec.id !== recId));
+    
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('recommendations')
+        .delete()
+        .eq('id', recId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setDismissedRecs(prev => [...prev, recId]);
+      setAiRecommendations(prev => prev.filter(rec => rec.id !== recId));
+    } catch (error) {
+      console.error('Failed to dismiss recommendation:', error);
+    }
   };
 
   // Mark recommendation as complete/implemented
