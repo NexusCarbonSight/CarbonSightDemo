@@ -1,9 +1,60 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './HomePage.css';
 
 function HomePage() {
   const navigate = useNavigate();
+  const { user, profile, loading } = useAuth();
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    console.log('HomePage mounted');
+    console.log('URL hash:', window.location.hash);
+    console.log('URL search:', window.location.search);
+    console.log('User:', user);
+    console.log('Profile:', profile);
+    console.log('Loading:', loading);
+    
+    const hasAuthTokens = hashParams.has('access_token') || 
+                         hashParams.has('refresh_token') || 
+                         searchParams.has('code');
+    
+    if (hasAuthTokens) {
+      console.log('Detected OAuth callback tokens, redirecting to AuthCallback');
+      navigate('/auth/callback', { replace: true });
+      return;
+    }
+    
+    if (user && profile && !loading) {
+      const intendedRole = sessionStorage.getItem('intended_role');
+      
+      if (intendedRole) {
+        console.log('User has intended role, routing to dashboard:', intendedRole);
+        
+        if (intendedRole === 'regulator') {
+          navigate('/regulator', { replace: true });
+        } else if (intendedRole === 'company') {
+          navigate('/company', { replace: true });
+        } else {
+          navigate('/public', { replace: true });
+        }
+        
+        sessionStorage.removeItem('intended_role');
+      }
+    }
+  }, [user, profile, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="home-page">
@@ -42,7 +93,7 @@ function HomePage() {
             </div>
             <h3>Company Portal</h3>
             <p>Access your compliance dashboard, track emissions, and manage regulatory requirements.</p>
-            <button className="portal-btn company-btn" onClick={() => navigate('/company')}>
+            <button className="portal-btn company-btn" onClick={() => navigate('/company-signin')}>
               Company Sign In
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -75,7 +126,7 @@ function HomePage() {
             </div>
             <h3>Regulator Portal</h3>
             <p>Monitor compliance across industries, review submissions, and enforce regulations.</p>
-            <button className="portal-btn regulator-btn" onClick={() => navigate('/regulator')}>
+            <button className="portal-btn regulator-btn" onClick={() => navigate('/regulator-signin')}>
               Regulator Sign In
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

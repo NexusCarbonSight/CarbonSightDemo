@@ -239,7 +239,6 @@ function CompanyDashboard() {
     setCurrentView('dashboard');
   };
 
-  // Handle task actions
   const handleTaskAction = (task) => {
     if (task.category === 'compliance') {
       setShowDocumentUpload(true);
@@ -252,7 +251,6 @@ function CompanyDashboard() {
     alert(`Task ${taskId} marked as complete!\n\nThis would normally update the task status in the database.`);
   };
 
-  // Handle document upload
   const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
     const newFiles = files.map(file => ({
@@ -265,7 +263,6 @@ function CompanyDashboard() {
     alert(`${files.length} file(s) uploaded successfully!`);
   };
 
-  // Handle chat functionality
   const handleChatSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -311,7 +308,6 @@ function CompanyDashboard() {
   };
 
   useEffect(() => {
-    // Simulate loading and fetch AI data
     if (!dataLoading) {
       fetchAIInsights();
       const timeout = setTimeout(() => setPageLoading(false), 500);
@@ -351,13 +347,19 @@ function CompanyDashboard() {
         <div className="header-left">
           <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <div className="header-info">
-            <h2>Welcome back, {dashboardData.company}</h2>
-            <p>Your Carbon Capture Dashboard</p>
+            <h2>Company Dashboard</h2>
+            <p>Welcome, {profile?.display_name || dashboardData.company}</p>
+            <span className="role-badge">Company Portal</span>
           </div>
         </div>
-        <button className="sign-out-btn" onClick={handleSignOut}>
-          Sign Out
-        </button>
+        <div className="header-right">
+          <div className="user-info">
+            <span className="user-email">{profile?.metadata?.email || 'Sasol Chemicals'}</span>
+          </div>
+          <button className="sign-out-btn" onClick={handleSignOut}>
+            Sign Out
+          </button>
+        </div>
       </header>
 
       <div className="dashboard-content">
@@ -710,7 +712,7 @@ function CompanyDashboard() {
             </button>
             <div className="view-header">
               <h2>Facility Locations</h2>
-              <p>Sasol Chemicals Louisiana facilities and environmental impact</p>
+<p>Company facilities and environmental impact across your locations</p>
             </div>
             <div className="facilities-list">
               {dashboardData.facilities?.map((facility) => (

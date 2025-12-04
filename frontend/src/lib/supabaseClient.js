@@ -1,3 +1,4 @@
+// src/lib/supabaseClient.js (or wherever your file lives)
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -14,9 +15,15 @@ export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // Supabase will redirect back here after OAuth
+    redirectTo: `${window.location.origin}/auth/callback`,
   },
 });
 
+// ❌ No more hard-coded "sasol" org.
+// If you ever want a default org, set REACT_APP_DEFAULT_ORG_SLUG in .env
 export const getDefaultOrgSlug = () =>
-  process.env.REACT_APP_DEFAULT_ORG_SLUG || 'sasol-chemicals-la';
+  process.env.REACT_APP_DEFAULT_ORG_SLUG || null;
+
+
 
