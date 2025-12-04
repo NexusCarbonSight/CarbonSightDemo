@@ -23,11 +23,77 @@
   gap: 16px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.home-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  color: #4CAF50;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-btn:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4CAF50;
+  transform: translateY(-1px);
+}
+
+.home-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 .header-info h2 {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 4px;
   color: #ffffff;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.role-badge.regulator {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.user-email {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.user-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: capitalize;
 }
 
 .header-info p {
@@ -421,7 +487,6 @@
   color: #0a0e27;
 }
 
-/* Chat Modal Styles */
 .chat-modal {
   position: fixed;
   bottom: 100px;
@@ -576,7 +641,6 @@
   transform: translateY(-1px);
 }
 
-/* Tabs Navigation */
 .tabs-nav {
   display: flex;
   gap: 8px;
@@ -618,7 +682,6 @@
   background: #34d3fd;
 }
 
-/* Tasks Section */
 .tasks-section {
   margin-top: 24px;
 }
@@ -753,7 +816,6 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Documents Section */
 .documents-section {
   margin-top: 24px;
 }
@@ -917,7 +979,6 @@
   border-color: #34d3fd;
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1052,7 +1113,6 @@
   }
 }
 
-/* AI-specific styles */
 .ai-loading {
   display: flex;
   flex-direction: column;
@@ -1098,7 +1158,6 @@
   gap: 8px;
 }
 
-/* Enhanced recommendation cards with AI indicators */
 .recommendation-card:has(.ai-badge) {
   background: linear-gradient(135deg, rgba(52, 211, 253, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%);
   border: 1px solid rgba(52, 211, 253, 0.2);
@@ -1134,7 +1193,6 @@
   }
 }
 
-/* Clickable Metric Cards */
 .metric-card.clickable {
   cursor: pointer;
   position: relative;
@@ -1146,7 +1204,6 @@
   box-shadow: 0 8px 24px rgba(52, 211, 253, 0.2);
 }
 
-/* View Container */
 .view-container {
   animation: fadeIn 0.3s ease-in;
 }
@@ -1162,7 +1219,6 @@
   }
 }
 
-/* Back Button */
 .back-button {
   display: flex;
   align-items: center;
@@ -1190,7 +1246,6 @@
   height: 20px;
 }
 
-/* View Header */
 .view-header {
   margin-bottom: 32px;
 }
@@ -1207,7 +1262,6 @@
   color: #8892b0;
 }
 
-/* Emissions by Facility View */
 .facilities-emissions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -1339,7 +1393,6 @@
   font-weight: 600;
 }
 
-/* Emissions Summary */
 .emissions-summary {
   background: linear-gradient(135deg, #1a1f3a 0%, #252b4a 100%);
   border-radius: 16px;
@@ -1381,7 +1434,6 @@
   font-weight: 500;
 }
 
-/* Facility Locations View */
 .facilities-list {
   display: flex;
   flex-direction: column;
@@ -1539,7 +1591,6 @@
   font-weight: 600;
 }
 
-/* Compliance Tasks View */
 .compliance-tasks-list {
   display: flex;
   flex-direction: column;
@@ -1701,7 +1752,6 @@
   font-weight: 700;
 }
 
-/* Recommendation Modal */
 .recommendation-modal {
   background: rgba(10, 14, 39, 0.98);
   backdrop-filter: blur(20px);
@@ -1912,7 +1962,6 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Responsive Design for New Views */
 @media (max-width: 1024px) {
   .facility-grid {
     grid-template-columns: repeat(2, 1fr);

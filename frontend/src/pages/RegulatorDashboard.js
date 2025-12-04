@@ -7,7 +7,7 @@ import { useRegulatorDashboardData } from '../hooks/useRegulatorDashboardData';
 
 function RegulatorDashboard() {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const { loading: dataLoading, error: dataError, complianceTrend, emissionsTrend, companies, submissions, alerts } =
     useRegulatorDashboardData();
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,6 @@ function RegulatorDashboard() {
   ]);
   const [chatInput, setChatInput] = useState('');
   
-  // Modal states
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
@@ -31,13 +30,11 @@ function RegulatorDashboard() {
   const [submissionSearchTerm, setSubmissionSearchTerm] = useState('');
   const [alertSearchTerm, setAlertSearchTerm] = useState('');
   
-  // Status filter states
   const [companyStatusFilter, setCompanyStatusFilter] = useState('all');
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
   const [alertStatusFilter, setAlertStatusFilter] = useState('all');
   const [alertSeverityFilter, setAlertSeverityFilter] = useState('all');
 
-  // Filter functions
   const filteredCompanies = (companies || []).filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
       company.status?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
@@ -95,7 +92,6 @@ function RegulatorDashboard() {
     navigate('/');
   };
 
-  // Enhanced interactive handlers
   const handleCompanyClick = (company) => {
     setSelectedCompany({
       ...company,
@@ -191,7 +187,6 @@ function RegulatorDashboard() {
     setEnforcementAction('');
   };
 
-  // Handle chat functionality
   const handleChatSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -200,7 +195,6 @@ function RegulatorDashboard() {
     setChatInput('');
     setChatMessages(prev => [...prev, { type: 'user', text: userMessage }]);
 
-    // Simulate AI response
     setTimeout(() => {
       const aiResponse = generateRegulatoryAIResponse(userMessage);
       setChatMessages(prev => [...prev, { type: 'ai', text: aiResponse }]);
@@ -245,13 +239,19 @@ function RegulatorDashboard() {
         <div className="header-left">
           <img src="/logo.png" alt="Logo" className="logo-icon" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
           <div className="header-info">
-            <h2>Welcome back,</h2>
+            <h2>Regulator Dashboard</h2>
             <p>Louisiana Department of Environmental Quality</p>
+            <span className="role-badge regulator">Regulatory Portal</span>
           </div>
         </div>
-        <button className="sign-out-btn" onClick={handleSignOut}>
-          Sign Out
-        </button>
+        <div className="header-right">
+          <div className="user-info">
+            <span className="user-email">{profile?.display_name || 'Regulator'}</span>
+          </div>
+          <button className="sign-out-btn" onClick={handleSignOut}>
+            Sign Out
+          </button>
+        </div>
       </header>
 
       <div className="dashboard-content">
@@ -331,7 +331,6 @@ function RegulatorDashboard() {
           </button>
         </div>
 
-        {/* charts moved to bottom */}
 
         {activeTab === 'overview' && (
           <div className="overview-section">
@@ -361,10 +360,8 @@ function RegulatorDashboard() {
               </div>
             </div>
 
-            {/* Spacer to push charts lower */}
             <div style={{ height: '50px' }}></div>
             
-            {/* Charts in Overview tab only */}
             <div className="charts-section">
               <div className="chart-card">
                 <h3>Statewide Compliance Trend</h3>
@@ -686,7 +683,6 @@ function RegulatorDashboard() {
         </div>
       )}
 
-      {/* Company Details Modal */}
       {selectedCompany && (
         <div className="modal-overlay" onClick={() => setSelectedCompany(null)}>
           <div className="modal-content company-modal" onClick={(e) => e.stopPropagation()}>
@@ -782,7 +778,6 @@ function RegulatorDashboard() {
         </div>
       )}
 
-      {/* Document Review Modal */}
       {selectedSubmission && (
         <div className="modal-overlay" onClick={() => setSelectedSubmission(null)}>
           <div className="modal-content document-modal" onClick={(e) => e.stopPropagation()}>
@@ -843,7 +838,6 @@ function RegulatorDashboard() {
         </div>
       )}
 
-      {/* Alert Details Modal */}
       {selectedAlert && (
         <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
           <div className="modal-content alert-modal" onClick={(e) => e.stopPropagation()}>
@@ -911,7 +905,6 @@ function RegulatorDashboard() {
         </div>
       )}
 
-      {/* Inspection Scheduling Modal */}
       {showInspectionModal && (
         <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
           <div className="modal-content inspection-modal" onClick={(e) => e.stopPropagation()}>
@@ -963,7 +956,6 @@ function RegulatorDashboard() {
         </div>
       )}
 
-      {/* Enforcement Action Modal */}
       {showEnforcementModal && (
         <div className="modal-overlay" onClick={() => setShowEnforcementModal(false)}>
           <div className="modal-content enforcement-modal" onClick={(e) => e.stopPropagation()}>
