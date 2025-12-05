@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CompanyDashboard.css';
 import ClimateTraceData from '../components/ClimateTraceData';
@@ -7,13 +7,14 @@ import { useCompanyDashboardData } from '../hooks/useCompanyDashboardData';
 import { getHuggingFaceService } from '../services/huggingfaceService';
 import { supabase } from '../lib/supabaseClient';
 
+const DOCUMENT_BUCKET = 'documents';
+
 function CompanyDashboard() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { data: dashboardData, loading: dataLoading, error: dataError } = useCompanyDashboardData(profile);
   const [pageLoading, setPageLoading] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState([]);
-  const [aiInsights, setAiInsights] = useState({});
   const [aiLoading, setAiLoading] = useState(false);
   const [dismissedRecs, setDismissedRecs] = useState([]);
   const [showChat, setShowChat] = useState(false);
@@ -22,10 +23,13 @@ function CompanyDashboard() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: 'Q3_Emissions_Report.pdf', type: 'compliance', date: '2024-10-15', status: 'approved' },
-    { name: 'Plant_C_Maintenance_Log.xlsx', type: 'maintenance', date: '2024-10-18', status: 'under_review' }
-  ]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const uploadInputRef = useRef(null);
+  const modalUploadInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
@@ -101,10 +105,6 @@ function CompanyDashboard() {
       const allRecs = aiRecs.filter(rec => !dismissedRecs.includes(rec.id));
       
       setAiRecommendations(allRecs);
-      setAiInsights({
-        trendAnalysis: hfService.calculateTrend(dashboardData?.emissionsData || []),
-        keyInsights: aiRecs.map(r => r.title)
-      });
     } catch (error) {
       console.error('Failed to fetch AI insights:', error);
       setAiRecommendations(dashboardData?.recommendations || []);
@@ -112,6 +112,44 @@ function CompanyDashboard() {
       setAiLoading(false);
     }
   }, [dashboardData?.orgId, dashboardData?.recommendations, dashboardData?.emissionsData, dashboardData?.complianceTasks, dashboardData?.facilities, dismissedRecs]);
+
+  const fetchDocuments = useCallback(async () => {
+    if (!dashboardData?.orgId) return;
+
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, name, document_type, status, storage_object_path, uploaded_at, metadata')
+        .eq('org_id', dashboardData.orgId)
+        .order('uploaded_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = (data || []).map((doc) => ({
+        id: doc.id,
+        name: doc.name,
+        type: doc.document_type,
+        status: doc.status,
+        date: doc.uploaded_at
+          ? new Date(doc.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Just now',
+        storagePath: doc.storage_object_path,
+        metadata: doc.metadata,
+      }));
+
+      setUploadedFiles(normalized);
+    } catch (err) {
+      console.error('Failed to load documents', err);
+      setDocumentsError(err);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [dashboardData?.orgId]);
 
   // NEW: helper to format deadline dates from deadlines.json
   const formatDeadlineDate = (dateStr) => {
@@ -251,16 +289,91 @@ function CompanyDashboard() {
     alert(`Task ${taskId} marked as complete!\n\nThis would normally update the task status in the database.`);
   };
 
-  const handleFileUpload = (event) => {
-    const files = Array.from(event.target.files);
-    const newFiles = files.map(file => ({
-      name: file.name,
-      type: 'compliance',
-      date: new Date().toISOString().split('T')[0],
-      status: 'pending'
-    }));
-    setUploadedFiles(prev => [...prev, ...newFiles]);
-    alert(`${files.length} file(s) uploaded successfully!`);
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    if (!dashboardData?.orgId) {
+      alert('Organisation context not ready yet. Please wait a moment and try again.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      for (const file of files) {
+        const safeName = file.name.replace(/\s+/g, '_');
+        const uniqueId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString();
+        const storagePath = `${dashboardData.orgId}/${uniqueId}-${safeName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase
+          .storage
+          .from(DOCUMENT_BUCKET)
+          .upload(storagePath, file, {
+            upsert: false,
+            contentType: file.type || 'application/octet-stream',
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { error: insertError } = await supabase
+          .from('documents')
+          .insert({
+            org_id: dashboardData.orgId,
+            name: file.name,
+            document_type: 'compliance',
+            status: 'pending',
+            storage_object_path: uploadData?.path || storagePath,
+            metadata: {
+              size: file.size,
+              uploaded_from: 'company_dashboard',
+            },
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+      }
+
+      await fetchDocuments();
+      alert(`${files.length} document(s) uploaded successfully.`);
+      setShowDocumentUpload(false);
+    } catch (err) {
+      console.error('File upload failed', err);
+      setUploadError(err);
+      alert(`Upload failed: ${err.message}`);
+    } finally {
+      setIsUploading(false);
+      if (event?.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleDocumentView = async (file) => {
+    if (!file?.storagePath) {
+      alert('This document does not have a stored file yet.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from(DOCUMENT_BUCKET)
+        .createSignedUrl(file.storagePath, 60);
+
+      if (error) {
+        throw error;
+      }
+
+      window.open(data.signedUrl, '_blank', 'noopener');
+    } catch (err) {
+      console.error('Failed to open document', err);
+      alert(`Unable to open document: ${err.message}`);
+    }
   };
 
   const handleChatSubmit = async (e) => {
@@ -315,6 +428,10 @@ function CompanyDashboard() {
     }
   }, [dataLoading, fetchAIInsights]);
 
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -353,9 +470,15 @@ function CompanyDashboard() {
           </div>
         </div>
         <div className="header-right">
-          <div className="user-info">
-            <span className="user-email">{profile?.metadata?.email || 'Sasol Chemicals'}</span>
-          </div>
+        <div className="user-info">
+          <span className="user-email">
+            {profile?.metadata?.company_name
+              || dashboardData?.company
+              || profile?.display_name
+              || profile?.metadata?.email
+              || 'Company'}
+          </span>
+        </div>
           <button className="sign-out-btn" onClick={handleSignOut}>
             Sign Out
           </button>
@@ -589,36 +712,62 @@ function CompanyDashboard() {
                     </svg>
                     <h4>Upload Documents</h4>
                     <p>Drag and drop files here, or click to select</p>
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept=".pdf,.doc,.docx,.xlsx,.xls" 
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xlsx,.xls"
                       onChange={handleFileUpload}
                       className="file-input"
+                      disabled={isUploading}
                     />
-                    <button className="upload-btn" onClick={() => document.querySelector('.file-input').click()}>Choose Files</button>
+                    <button
+                      className="upload-btn"
+                      onClick={() => uploadInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? 'Uploading…' : 'Choose Files'}
+                    </button>
+                    {uploadError && (
+                      <p className="upload-error">Upload failed: {uploadError.message}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="documents-list">
                   <h4>Uploaded Documents</h4>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="document-item">
-                      <div className="document-icon">
-                        {file.name.endsWith('.pdf') ? '📄' : '📊'}
+                  {documentsError && (
+                    <p className="document-error">Unable to load documents: {documentsError.message}</p>
+                  )}
+                  {documentsLoading ? (
+                    <p className="document-status">Loading documents…</p>
+                  ) : uploadedFiles.length === 0 ? (
+                    <p className="document-status">No documents uploaded yet.</p>
+                  ) : (
+                    uploadedFiles.map((file) => (
+                      <div key={file.id || file.name} className="document-item">
+                        <div className="document-icon">
+                          {file.name?.toLowerCase().endsWith('.pdf') ? '📄' : '📊'}
+                        </div>
+                        <div className="document-info">
+                          <h5>{file.name}</h5>
+                          <p>Type: {file.type || 'compliance'} • Uploaded: {file.date || 'Just now'}</p>
+                        </div>
+                        <span className={`document-status ${file.status}`}>
+                          {file.status === 'approved' ? '✅ Approved' :
+                           file.status === 'under_review' ? '🔍 Under Review' :
+                           file.status === 'rejected' ? '⚠ Rejected' : '⏳ Pending'}
+                        </span>
+                        <button
+                          className="document-action-btn"
+                          onClick={() => handleDocumentView(file)}
+                          disabled={!file.storagePath}
+                        >
+                          View
+                        </button>
                       </div>
-                      <div className="document-info">
-                        <h5>{file.name}</h5>
-                        <p>Type: {file.type} • Uploaded: {file.date}</p>
-                      </div>
-                      <span className={`document-status ${file.status}`}>
-                        {file.status === 'approved' ? '✅ Approved' : 
-                         file.status === 'under_review' ? '🔍 Under Review' : 
-                         '⏳ Pending'}
-                      </span>
-                      <button className="document-action-btn" onClick={() => alert(`Viewing document: ${file.name}\n\nThis would normally open a document viewer.`)}>View</button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -976,6 +1125,9 @@ function CompanyDashboard() {
                 <button className="btn-secondary" onClick={() => setSelectedRecommendation(null)}>
                   Close
                 </button>
+                {uploadError && (
+                  <p className="upload-error">Upload failed: {uploadError.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -992,13 +1144,21 @@ function CompanyDashboard() {
             <div className="modal-content">
               <p>Upload your compliance document for review by regulators.</p>
               <div className="upload-zone-modal">
-                <input 
-                  type="file" 
-                  accept=".pdf,.doc,.docx,.xlsx,.xls" 
+                <input
+                  ref={modalUploadInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xlsx,.xls"
                   onChange={handleFileUpload}
                   className="file-input"
+                  disabled={isUploading}
                 />
-                <button className="upload-btn-modal" onClick={() => document.querySelector('.upload-zone-modal .file-input').click()}>Select Document</button>
+                <button
+                  className="upload-btn-modal"
+                  onClick={() => modalUploadInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading…' : 'Select Document'}
+                </button>
               </div>
             </div>
           </div>

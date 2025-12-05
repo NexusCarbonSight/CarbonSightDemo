@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ClimateTraceData.css';
-import { supabase } from '../lib/supabaseClient';
-
 const defaultBenchmark = {
   sector: 'oil-and-gas',
   year: new Date().getFullYear(),

@@ -4,12 +4,25 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import './RegulatorDashboard.css';
 import { useAuth } from '../context/AuthContext';
 import { useRegulatorDashboardData } from '../hooks/useRegulatorDashboardData';
+import { supabase } from '../lib/supabaseClient';
+
+const DOCUMENT_BUCKET = 'documents';
 
 function RegulatorDashboard() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
-  const { loading: dataLoading, error: dataError, complianceTrend, emissionsTrend, companies, submissions, alerts } =
-    useRegulatorDashboardData();
+  const {
+    loading: dataLoading,
+    error: dataError,
+    complianceTrend,
+    emissionsTrend,
+    companies: initialCompanies = [],
+    submissions: initialSubmissions = [],
+    alerts: initialAlerts = [],
+  } = useRegulatorDashboardData();
+  const [companies, setCompanies] = useState(initialCompanies);
+  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [alerts, setAlerts] = useState(initialAlerts);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showChat, setShowChat] = useState(false);
@@ -17,6 +30,10 @@ function RegulatorDashboard() {
     { type: 'ai', text: 'Hello! I\'m your regulatory AI assistant. I can help with compliance monitoring, alert analysis, and regulatory insights. How can I assist you today?' }
   ]);
   const [chatInput, setChatInput] = useState('');
+  
+  useEffect(() => setCompanies(initialCompanies), [initialCompanies]);
+  useEffect(() => setSubmissions(initialSubmissions), [initialSubmissions]);
+  useEffect(() => setAlerts(initialAlerts), [initialAlerts]);
   
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -34,6 +51,51 @@ function RegulatorDashboard() {
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
   const [alertStatusFilter, setAlertStatusFilter] = useState('all');
   const [alertSeverityFilter, setAlertSeverityFilter] = useState('all');
+  const [documentActionLoading, setDocumentActionLoading] = useState(false);
+
+  const logRegulatorAlert = async ({ orgId, severity, status, title, description, metadata = {} }) => {
+    const { data, error } = await supabase
+      .from('alerts')
+      .insert([{ org_id: orgId, severity, status, title, description, metadata }])
+      .select('id, org_id, severity, status, detected_at, title, description')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    const companyName = companies.find((company) => company.id === orgId)?.name || selectedCompany?.name || 'Unknown';
+    const newAlert = {
+      id: data.id,
+      company: companyName,
+      type: data.title,
+      severity: data.severity,
+      status: data.status,
+      timestamp: data.detected_at,
+      description: data.description || '',
+    };
+
+    setAlerts((prev) => [newAlert, ...prev]);
+
+    setSelectedCompany((prev) => {
+      if (!prev || prev.id !== orgId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        violations: [
+          ...(prev.violations || []),
+          {
+            id: newAlert.id,
+            type: newAlert.type,
+            date: newAlert.timestamp,
+            severity: newAlert.severity,
+            resolved: newAlert.status === 'resolved',
+          },
+        ],
+      };
+    });
+  };
 
   const filteredCompanies = (companies || []).filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
@@ -95,30 +157,19 @@ function RegulatorDashboard() {
   const handleCompanyClick = (company) => {
     setSelectedCompany({
       ...company,
-      facilities: [],
-      recentDocuments: submissions
-        ?.filter(doc => doc.company === company.name)
-        .slice(0, 5)
-        .map(doc => ({
-          name: doc.document,
-          date: doc.submitted,
-          status: doc.status === 'approved' ? 'Approved' : doc.status === 'under_review' ? 'Under Review' : 'Pending',
-        })),
-      violations: alerts
-        ?.filter(alert => alert.company === company.name && (alert.status === 'active' || alert.status === 'pending'))
-        .map(alert => ({
-          date: alert.timestamp,
-          type: alert.type,
-          severity: alert.severity,
-          resolved: alert.status === 'resolved',
-        })),
+      facilities: company.facilities || [],
+      recentDocuments: company.recentDocuments || [],
+      violations: company.violations || [],
     });
   };
 
   const handleDocumentReview = (submission) => {
     const metadata = submission.metadata ?? {};
+    setReviewComment('');
     setSelectedSubmission({
       ...submission,
+      orgId: submission.orgId ?? submission.org_id,
+      storagePath: submission.storagePath ?? submission.storage_object_path,
       details: {
         fileSize: metadata.file_size ?? metadata.fileSize ?? 'N/A',
         pages: metadata.page_count ?? metadata.pages ?? null,
@@ -127,6 +178,93 @@ function RegulatorDashboard() {
         complianceIssues: metadata.issues ?? metadata.complianceIssues ?? [],
       }
     });
+  };
+
+  const updateDocumentState = (updatedDoc) => {
+    setSubmissions((prev) =>
+      prev.map((submission) =>
+        submission.id === updatedDoc.id
+          ? {
+              ...submission,
+              status: updatedDoc.status?.toLowerCase() || 'pending',
+              metadata: updatedDoc.metadata || {},
+              storagePath: updatedDoc.storage_object_path || submission.storagePath,
+              submitted: updatedDoc.uploaded_at,
+            }
+          : submission
+      )
+    );
+
+    setCompanies((prev) =>
+      prev.map((company) => {
+        if (company.id !== updatedDoc.org_id) {
+          return company;
+        }
+        const nextRecentDocs = [
+          {
+            id: updatedDoc.id,
+            name: updatedDoc.name,
+            date: updatedDoc.uploaded_at,
+            status: updatedDoc.status || 'Pending',
+            storagePath: updatedDoc.storage_object_path,
+          },
+          ...(company.recentDocuments || []).filter((doc) => doc.id !== updatedDoc.id),
+        ].slice(0, 5);
+
+        return {
+          ...company,
+          recentDocuments: nextRecentDocs,
+        };
+      })
+    );
+
+    setSelectedCompany((prev) => {
+      if (!prev || prev.id !== updatedDoc.org_id) {
+        return prev;
+      }
+
+      const nextRecentDocs = [
+        {
+          id: updatedDoc.id,
+          name: updatedDoc.name,
+          date: updatedDoc.uploaded_at,
+          status: updatedDoc.status || 'Pending',
+          storagePath: updatedDoc.storage_object_path,
+        },
+        ...(prev.recentDocuments || []).filter((doc) => doc.id !== updatedDoc.id),
+      ].slice(0, 5);
+
+      return {
+        ...prev,
+        recentDocuments: nextRecentDocs,
+      };
+    });
+  };
+
+  const handlePreviewDocument = async () => {
+    if (!selectedSubmission?.storagePath) {
+      alert('No file is attached to this submission yet.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from(DOCUMENT_BUCKET)
+        .createSignedUrl(selectedSubmission.storagePath, 120);
+      if (error) {
+        throw error;
+      }
+
+      const url = data?.signedUrl;
+      if (!url) {
+        throw new Error('Failed to retrieve preview URL.');
+      }
+
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      console.error('Document preview failed', err);
+      alert('Unable to open the document preview. Please try again.');
+    }
   };
 
   const handleAlertAction = (alert) => {
@@ -145,46 +283,135 @@ function RegulatorDashboard() {
     });
   };
 
-  const handleApproveDocument = () => {
-    if (!reviewComment.trim()) {
-      alert('Please provide review comments before approving.');
+  const handleDocumentStatusChange = async (nextStatus) => {
+    if (!selectedSubmission) {
       return;
     }
-    alert(`Document approved for ${selectedSubmission.company}\nReview: ${reviewComment}`);
-    setSelectedSubmission(null);
-    setReviewComment('');
-  };
 
-  const handleRejectDocument = () => {
     if (!reviewComment.trim()) {
-      alert('Please provide reasons for rejection.');
+      const message =
+        nextStatus === 'approved'
+          ? 'Please provide review comments before approving.'
+          : 'Please provide reasons for rejection.';
+      alert(message);
       return;
     }
-    alert(`Document rejected for ${selectedSubmission.company}\nReason: ${reviewComment}`);
-    setSelectedSubmission(null);
-    setReviewComment('');
+
+    setDocumentActionLoading(true);
+    try {
+      const mergedMetadata = {
+        ...(selectedSubmission.metadata || {}),
+        review_comment: reviewComment,
+        review_comment_author: profile?.display_name || profile?.email || profile?.id,
+        review_comment_at: new Date().toISOString(),
+        review_status: nextStatus,
+      };
+
+      const { data, error } = await supabase
+        .from('documents')
+        .update({
+          status: nextStatus,
+          metadata: mergedMetadata,
+        })
+        .eq('id', selectedSubmission.id)
+        .select('id, org_id, name, document_type, uploaded_at, status, metadata, storage_object_path')
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      updateDocumentState(data);
+      alert(`Document ${nextStatus} for ${selectedSubmission.company}.`);
+      setSelectedSubmission(null);
+      setReviewComment('');
+    } catch (err) {
+      console.error('Document status update failed', err);
+      alert('Failed to update the document. Please try again.');
+    } finally {
+      setDocumentActionLoading(false);
+    }
   };
 
-  const handleScheduleInspection = () => {
+  const handleApproveDocument = () => handleDocumentStatusChange('approved');
+  const handleRejectDocument = () => handleDocumentStatusChange('rejected');
+
+  const handleScheduleInspection = async () => {
     if (!inspectionDate) {
       alert('Please select an inspection date.');
       return;
     }
-    alert(`Inspection scheduled for ${selectedCompany.name} on ${inspectionDate}`);
-    setShowInspectionModal(false);
-    setSelectedCompany(null);
-    setInspectionDate('');
+
+    try {
+      await logRegulatorAlert({
+        orgId: selectedCompany.id,
+        severity: 'medium',
+        status: 'scheduled',
+        title: 'Inspection Scheduled',
+        description: `Inspection scheduled for ${inspectionDate}`,
+        metadata: {
+          inspection_date: inspectionDate,
+          initiated_by: profile?.display_name || profile?.email || 'Regulator',
+        },
+      });
+
+      alert(`Inspection scheduled for ${selectedCompany.name} on ${inspectionDate}`);
+      setShowInspectionModal(false);
+      setSelectedCompany(null);
+      setInspectionDate('');
+    } catch (err) {
+      console.error('Schedule inspection error', err);
+      alert('Failed to schedule inspection. Please try again.');
+    }
   };
 
-  const handleEnforcementAction = () => {
+  const handleEnforcementAction = async () => {
     if (!enforcementAction.trim()) {
       alert('Please specify enforcement action details.');
       return;
     }
-    alert(`Enforcement action initiated for ${selectedCompany.name}\nAction: ${enforcementAction}`);
-    setShowEnforcementModal(false);
-    setSelectedCompany(null);
-    setEnforcementAction('');
+
+    try {
+      await logRegulatorAlert({
+        orgId: selectedCompany.id,
+        severity: 'high',
+        status: 'active',
+        title: 'Enforcement Action Initiated',
+        description: enforcementAction,
+        metadata: {
+          initiated_by: profile?.display_name || profile?.email || 'Regulator',
+        },
+      });
+
+      alert(`Enforcement action initiated for ${selectedCompany.name}\nAction: ${enforcementAction}`);
+      setShowEnforcementModal(false);
+      setSelectedCompany(null);
+      setEnforcementAction('');
+    } catch (err) {
+      console.error('Enforcement action error', err);
+      alert('Failed to submit enforcement action. Please try again.');
+    }
+  };
+
+  const handleSendNotice = async () => {
+    try {
+      await logRegulatorAlert({
+        orgId: selectedCompany.id,
+        severity: 'low',
+        status: 'pending',
+        title: 'Compliance Notice Issued',
+        description: `Compliance notice sent to ${selectedCompany.name}`,
+        metadata: {
+          issued_by: profile?.display_name || profile?.email || 'Regulator',
+        },
+      });
+
+      alert(`Compliance notice sent to ${selectedCompany.name}`);
+      setSelectedCompany(null);
+    } catch (err) {
+      console.error('Send notice error', err);
+      alert('Failed to send compliance notice. Please try again.');
+    }
   };
 
   const handleChatSubmit = async (e) => {
@@ -519,7 +746,9 @@ function RegulatorDashboard() {
                   >
                     <option value="all">All Status</option>
                     <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                     <option value="under_review">Under Review</option>
+                    <option value="pending">Pending</option>
                     <option value="overdue">Overdue</option>
                   </select>
                 </div>
@@ -551,9 +780,15 @@ function RegulatorDashboard() {
                   </div>
                   <div className="submission-meta">
                     <span className={`submission-status ${submission.status}`}>
-                      {submission.status === 'approved' ? 'Approved' : 
-                       submission.status === 'under_review' ? 'Under Review' : 
-                       'Action Required'}
+                      {submission.status === 'approved'
+                        ? 'Approved'
+                        : submission.status === 'rejected'
+                          ? 'Rejected'
+                          : submission.status === 'under_review'
+                            ? 'Under Review'
+                            : submission.status === 'pending'
+                              ? 'Pending Review'
+                              : 'Action Required'}
                     </span>
                     <div style={{ marginTop: '8px' }}>
                       <span className="reviewer">Reviewer: {submission.reviewer}</span>
@@ -563,7 +798,7 @@ function RegulatorDashboard() {
                     className="submission-action-btn"
                     onClick={() => handleDocumentReview(submission)}
                   >
-                    {submission.status === 'approved' ? 'View' : 'Review'}
+                    {submission.status === 'approved' || submission.status === 'rejected' ? 'View' : 'Review'}
                   </button>
                 </div>
               ))}
@@ -767,10 +1002,7 @@ function RegulatorDashboard() {
               <button className="action-btn primary" onClick={() => setShowEnforcementModal(true)}>
                 Enforcement Action
               </button>
-              <button className="action-btn warning" onClick={() => {
-                alert(`Compliance notice sent to ${selectedCompany.name}`);
-                setSelectedCompany(null);
-              }}>
+              <button className="action-btn warning" onClick={handleSendNotice}>
                 Send Notice
               </button>
             </div>
@@ -822,15 +1054,21 @@ function RegulatorDashboard() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="action-btn secondary" onClick={() => {
-                alert(`Document preview opened for ${selectedSubmission.company}`);
-              }}>
+              <button className="action-btn secondary" onClick={handlePreviewDocument}>
                 Preview Document
               </button>
-              <button className="action-btn danger" onClick={handleRejectDocument}>
+              <button
+                className="action-btn danger"
+                onClick={handleRejectDocument}
+                disabled={documentActionLoading}
+              >
                 Reject
               </button>
-              <button className="action-btn success" onClick={handleApproveDocument}>
+              <button
+                className="action-btn success"
+                onClick={handleApproveDocument}
+                disabled={documentActionLoading}
+              >
                 Approve
               </button>
             </div>

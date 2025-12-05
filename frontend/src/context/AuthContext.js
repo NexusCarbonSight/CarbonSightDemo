@@ -297,7 +297,7 @@ export function AuthProvider({ children }) {
       signOut,
       refreshProfile,
     }),
-    [session, profile, loading, error, grantedAccess]
+    [session, profile, loading, error, grantedAccess, grantAccess, signInWithPassword, signInWithGoogle, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

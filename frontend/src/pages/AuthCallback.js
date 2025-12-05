@@ -5,7 +5,7 @@ import './AuthCallback.css';
 
 function AuthCallback() {
   const navigate = useNavigate();
-  const { profile, loading, refreshProfile } = useAuth();
+  const { loading, refreshProfile } = useAuth();
 
   useEffect(() => {
     const handleAuth = async () => {
